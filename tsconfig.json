@@ -10,5 +10,11 @@
     "esModuleInterop": true,
     "skipLibCheck": true
   },
-  "exclude": ["node_modules", ".vscode-test", "out"]
+  "include": [
+    "src"
+  ],
+  "exclude": [
+    "node_modules",
+    "out"
+  ]
 }

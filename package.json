@@ -1,52 +1,199 @@
 {
-  "name": "quokka-lite",
-  "displayName": "Quokka Lite - Inline JS Evaluator",
+  "name": "quokka-js",
+  "displayName": "Quokka.js - JavaScript/TypeScript Live Scratchpad",
   "publisher": "your-name",
   "engines": { "vscode": "^1.60.0" },
-  "version": "0.0.1",
-  "description": "Lightweight Quokka-like extension that evaluates marked JS lines inline, shows results, and provides simple coverage visualization.",
+  "version": "1.0.0",
+  "description": "Production-ready Quokka-like extension that provides instant feedback for JavaScript/TypeScript with advanced features including coverage tracking, multiple runtimes, and customizable themes.",
   "repository": {
     "type": "git",
     "url": "https://github.com/your-name/quokka-lite"
   },
   "license": "MIT",
-  "categories": ["Other"],
+  "categories": ["Other", "Debuggers", "Testing"],
+  "keywords": ["javascript", "typescript", "evaluation", "repl", "quokka", "live", "instant"],
   "activationEvents": [
-    "*",
-    "onCommand:quakka-js-clone.evaluateCurrentFile",
-    "onCommand:quakka-js-clone.toggleEvaluation",
-    "onCommand:quakka-js-clone.clearResults"
+    "onLanguage:javascript",
+    "onLanguage:typescript",
+    "onLanguage:javascriptreact",
+    "onLanguage:typescriptreact"
   ],
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
-      { "command": "quakka-js-clone.evaluateCurrentFile", "title": "Quakka.js Clone: Evaluate Current File" },
-      { "command": "quakka-js-clone.toggleEvaluation", "title": "Quakka.js Clone: Toggle Evaluation" },
-      { "command": "quakka-js-clone.clearResults", "title": "Quakka.js Clone: Clear Results" }
+      {
+        "command": "quokka.evaluate",
+        "title": "Quokka: Evaluate Current File",
+        "icon": "$(play)"
+      },
+      {
+        "command": "quokka.toggle",
+        "title": "Quokka: Toggle Auto-Evaluation",
+        "icon": "$(debug-pause)"
+      },
+      {
+        "command": "quokka.clear",
+        "title": "Quokka: Clear Results",
+        "icon": "$(clear-all)"
+      },
+      {
+        "command": "quokka.clearContext",
+        "title": "Quokka: Clear Runtime Context"
+      },
+      {
+        "command": "quokka.showOutput",
+        "title": "Quokka: Show Output Panel"
+      },
+      {
+        "command": "quokka.createScratchpad",
+        "title": "Quokka: Create Scratchpad File"
+      }
     ],
+    "menus": {
+      "editor/title": [
+        {
+          "when": "resourceLangId == javascript || resourceLangId == typescript",
+          "command": "quokka.evaluate",
+          "group": "navigation"
+        }
+      ],
+      "editor/context": [
+        {
+          "when": "resourceLangId == javascript || resourceLangId == typescript",
+          "command": "quokka.evaluate",
+          "group": "quokka"
+        },
+        {
+          "when": "resourceLangId == javascript || resourceLangId == typescript",
+          "command": "quokka.clear",
+          "group": "quokka"
+        }
+      ]
+    },
     "configuration": {
       "type": "object",
-      "title": "Quokka-like settings",
+      "title": "Quokka Lite",
       "properties": {
-        "quakka-js-clone.resultColor": { "type": "string", "default": "#888888", "description": "(legacy) Color used to render evaluation results" },
-        "quakka-js-clone.errorColor": { "type": "string", "default": "#ff6b6b", "description": "(legacy) Color used to render evaluation errors" },
-        "quakka-js-clone.autoEvaluate": { "type": "boolean", "default": true, "description": "(legacy) Automatically evaluate and annotate files when opening/changing" },
-        "quakka-js-clone.evaluationDelay": { "type": "number", "default": 500, "description": "(legacy) Delay (ms) after edits before evaluation runs" },
-        "quakka-js-clone.maxLineLength": { "type": "number", "default": 100, "description": "(legacy) Skip lines longer than this when evaluating" },
-        "quakka-js-clone.showErrors": { "type": "boolean", "default": true, "description": "(legacy) Show errors inline for failed evaluations" },
-
-        "quokkaJsClone.resultColor": { "type": "string", "default": "#7a7a7a", "description": "Color used to render evaluation results" },
-        "quokkaJsClone.errorColor": { "type": "string", "default": "#ff4d4f", "description": "Color used to render evaluation errors" },
-        "quokkaJsClone.autoEvaluate": { "type": "boolean", "default": true, "description": "Automatically evaluate and annotate files when opening/changing" },
-        "quokkaJsClone.evaluationDelay": { "type": "number", "default": 400, "description": "Delay (ms) after edits before evaluation runs" },
-        "quokkaJsClone.maxEvaluationsPerFile": { "type": "number", "default": 200, "description": "Maximum evaluations per file pass" },
-        "quokkaJsClone.timeoutPerRunMs": { "type": "number", "default": 600, "description": "Timeout per vm run (ms)" },
-        "quokkaJsClone.showErrors": { "type": "boolean", "default": true, "description": "Show errors inline for failed evaluations" }
+        "quokkaLite.execution.runtime": {
+          "type": "string",
+          "enum": ["node", "browser", "custom"],
+          "default": "node",
+          "description": "JavaScript runtime environment"
+        },
+        "quokkaLite.execution.customRuntime": {
+          "type": "string",
+          "description": "Path to custom JavaScript runtime"
+        },
+        "quokkaLite.execution.timeout": {
+          "type": "number",
+          "default": 5000,
+          "description": "Execution timeout in milliseconds"
+        },
+        "quokkaLite.execution.maxMemoryMB": {
+          "type": "number",
+          "default": 128,
+          "description": "Maximum memory usage in MB"
+        },
+        "quokkaLite.execution.enableConsoleRedirection": {
+          "type": "boolean",
+          "default": true,
+          "description": "Capture console output"
+        },
+        "quokkaLite.execution.enableCoverage": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show code coverage highlighting"
+        },
+        "quokkaLite.behavior.autoEvaluate": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically evaluate on file change"
+        },
+        "quokkaLite.behavior.evaluationDelay": {
+          "type": "number",
+          "default": 300,
+          "description": "Delay in ms before evaluation after typing"
+        },
+        "quokkaLite.behavior.maxEvaluationsPerFile": {
+          "type": "number",
+          "default": 200,
+          "description": "Maximum number of evaluations per file"
+        },
+        "quokkaLite.theme.resultColor": {
+          "type": "string",
+          "default": "#7a7a7a",
+          "description": "Color for successful results"
+        },
+        "quokkaLite.theme.errorColor": {
+          "type": "string",
+          "default": "#ff4d4f",
+          "description": "Color for errors"
+        },
+        "quokkaLite.theme.consoleColor": {
+          "type": "string",
+          "default": "#1890ff",
+          "description": "Color for console output"
+        },
+        "quokkaLite.theme.successColor": {
+          "type": "string",
+          "default": "#52c41a",
+          "description": "Color for success indicators"
+        },
+        "quokkaLite.theme.warningColor": {
+          "type": "string",
+          "default": "#faad14",
+          "description": "Color for warnings"
+        },
+        "quokkaLite.theme.coverageHighlight": {
+          "type": "string",
+          "default": "rgba(82,196,26,0.06)",
+          "description": "Background color for covered lines"
+        },
+        "quokkaLite.output.format": {
+          "type": "string",
+          "enum": ["inline", "panel", "both"],
+          "default": "inline",
+          "description": "How to display results"
+        },
+        "quokkaLite.output.showTypes": {
+          "type": "boolean",
+          "default": false,
+          "description": "Show TypeScript types in results"
+        },
+        "quokkaLite.output.showExecutionTime": {
+          "type": "boolean",
+          "default": false,
+          "description": "Show execution time for each evaluation"
+        },
+        "quokkaLite.output.truncateValues": {
+          "type": "boolean",
+          "default": true,
+          "description": "Truncate long values in inline display"
+        },
+        "quokkaLite.output.maxValueLength": {
+          "type": "number",
+          "default": 100,
+          "description": "Maximum length for inline values"
+        }
       }
     },
     "views": {
-      "explorer": [
-        { "id": "quokkaResults", "name": "Quokka-like Results", "icon": "resources/icon.png" }
+      "quokkaLitePanel": [
+        {
+          "id": "quokkaLite.results",
+          "name": "Quokka Lite Results",
+          "icon": "$(output)",
+          "contextualTitle": "Quokka Lite Results"
+        }
+      ]
+    },
+    "viewsContainers": {
+      "panel": [
+        {
+          "id": "quokkaLitePanel",
+          "title": "Quokka Lite",
+          "icon": "$(play)"
+        }
       ]
     }
   },
@@ -55,15 +202,27 @@
     "compile": "tsc -p ./",
     "watch": "tsc -w -p ./",
     "pretest": "npm run compile",
-    "test": "jest --colors"
+    "test": "jest --colors",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "lint": "eslint src --ext ts",
+    "package": "vsce package",
+    "publish": "vsce publish"
   },
-  "dependencies": { "isolated-vm": "^6.0.1", "vm2": "^3.9.19", "acorn": "^8.8.2" },
+  "dependencies": {
+    "acorn": "^8.11.0",
+    "vm2": "^3.9.19"
+  },
   "devDependencies": {
-    "@types/node": "^24.3.0",
-    "@types/vscode": "^1.103.0",
-    "typescript": "^5.9.2",
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.60.0",
+    "typescript": "^5.0.0",
     "jest": "^29.0.0",
     "ts-jest": "^29.0.0",
-    "@types/jest": "^29.0.0"
+    "@types/jest": "^29.0.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "eslint": "^8.0.0",
+    "vsce": "^2.15.0"
   }
 }
