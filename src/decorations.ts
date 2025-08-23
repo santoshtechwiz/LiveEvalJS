@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { ThemeConfig } from './types';
-import { ConfigurationManager } from './config';
+import { ConfigurationManager } from './core/ConfigurationManager';
 
 export class DecorationManager {
   private static instance: DecorationManager;

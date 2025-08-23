@@ -1,8 +1,8 @@
 import * as vm from 'vm';
 import * as acorn from 'acorn';
 import { formatValue, formatError } from './utils';
-import { ConfigurationManager } from './config';
-import { Logger } from './logger';
+import { ConfigurationManager } from './core/ConfigurationManager';
+import { Logger } from './core/Logger';
 
 export type EvalResult = { value?: any; isError: boolean; error?: any; producedFromStatement?: boolean };
 

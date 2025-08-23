@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import * as vm from 'vm';
 import { CodeRunner } from './core/CodeRunner';
 import { ConfigurationManager } from './core/ConfigurationManager';
 import { Logger } from './core/Logger';
@@ -202,6 +203,100 @@ export class QuokkaExtension {
       this.statusBarItem.hide();
     }
   }
+}
+
+// Utility for handling circular references in JSON.stringify
+export function replacerCircular() {
+  const seen = new WeakSet();
+  return function (_key: string, value: any) {
+    if (typeof value === 'object' && value !== null) {
+      if (seen.has(value)) return '[Circular]';
+      seen.add(value);
+    }
+    if (typeof value === 'function') return `[Function: ${value.name || 'anonymous'}]`;
+    return value;
+  };
+}
+
+export const LIVE_MARKER_RE = /\/\/\s*\?/;
+
+export function formatValue(value: any, maxLen = 200): string {
+  try {
+    if (value === undefined) return 'undefined';
+    if (value === null) return 'null';
+    if (typeof value === 'string') return `"${value}"`;
+    if (typeof value === 'function') return `[Function: ${value.name || 'anonymous'}]`;
+    if (typeof value === 'symbol') return value.toString();
+    if (typeof value === 'object') {
+      const str = JSON.stringify(value, replacerCircular(), 2);
+      if (str.length > maxLen) return str.slice(0, maxLen) + '...';
+      return str;
+    }
+    return String(value);
+  } catch (err) {
+    return String(err);
+  }
+}
+
+export function formatError(err: any): string {
+  if (!err) return 'Unknown error';
+  if (err instanceof Error) {
+    return `${err.name}: ${err.message}` + (err.stack ? `\n${err.stack.split('\n').slice(0,3).join('\n')}` : '');
+  }
+  return String(err);
+}
+
+export function evalExpression(context: vm.Context, code: string, timeoutMs = 1000) {
+  try {
+    // Try to evaluate as expression first (wrap in parentheses)
+    const wrapped = `(function(){ return (${code}); })()`;
+    try {
+      const res = vm.runInContext(wrapped, context, { timeout: timeoutMs });
+      return { isError: false, result: formatValue(res) };
+    } catch (e) {
+      // If expression evaluation failed (e.g., declaration), run as script
+      try {
+        vm.runInContext(code, context, { timeout: timeoutMs });
+        // Declarations produce no result
+        return { isError: false, result: undefined };
+      } catch (err2) {
+        return { isError: true, error: err2, result: formatError(err2) };
+      }
+    }
+  } catch (err) {
+    return { isError: true, error: err, result: formatError(err) };
+  }
+}
+
+// Minimal status bar helpers for tests and simple control
+let _testStatusBarItem: vscode.StatusBarItem | undefined;
+export function getStatusBarItem(): vscode.StatusBarItem | undefined {
+  if (!_testStatusBarItem) {
+    try {
+      _testStatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 1000);
+    } catch {
+      _testStatusBarItem = undefined;
+    }
+  }
+  return _testStatusBarItem;
+}
+
+export function updateStatusBarFromItems(items: Array<{ line: number; label: string; value: string; status?: 'ok'|'info'|'error' }>) {
+  const sb = getStatusBarItem();
+  if (!sb) return;
+  const hasError = items.some(i => i.status === 'error');
+  const hasOk = items.some(i => i.status === 'ok');
+  if (hasError) {
+    sb.text = '$(error) Quokka';
+    sb.color = '#ff4d4f';
+  } else if (hasOk) {
+    sb.text = '$(check) Quokka';
+    sb.color = '#52c41a';
+  } else {
+    sb.text = '$(info) Quokka';
+    sb.color = '#faad14';
+  }
+  sb.show();
 }
 
 // VS Code extension entry points

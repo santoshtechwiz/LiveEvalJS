@@ -5,7 +5,7 @@ import { Sandbox, EvalResult } from './sandbox';
 import { DecorationManager } from './decorations';
 import ResultsProvider, { ResultItem } from './resultsProvider';
 import { EvaluationMarker } from './types';
-import { ConfigurationManager } from './config';
+import { ConfigurationManager } from './core/ConfigurationManager';
 
 export class Evaluator {
   private decorationManager = DecorationManager.getInstance();

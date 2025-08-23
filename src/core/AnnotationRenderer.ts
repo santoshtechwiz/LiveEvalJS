@@ -154,8 +154,7 @@ export class AnnotationRenderer {
                 contentText: ` 📝 ${consoleText}`,
                 color: '#74c0fc',
                 fontStyle: 'italic',
-                margin: '0 0 0 1em',
-                opacity: '0.8'
+                margin: '0 0 0 1em'
               }
             }
           });
