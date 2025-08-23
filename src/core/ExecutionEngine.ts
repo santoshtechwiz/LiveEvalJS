@@ -78,7 +78,21 @@ export class ExecutionEngine extends EventEmitter {
       // Compile TypeScript if needed
       let executableCode = code;
       if (context.language === 'typescript') {
-        executableCode = this.compileTypeScript(code);
+        // Try to capture the value of the last expression by appending an assignment to the sandbox global
+        try {
+          const lines = code.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+          const last = lines.length ? lines[lines.length - 1] : '';
+          if (last && !/^(const|let|var|function|class|interface|export|import|return|throw)\b/.test(last)) {
+            // append code that assigns the last expression to __quokka_result
+            executableCode = `${code}\n; (globalThis || this).__quokka_result = (${last});`;
+          } else {
+            executableCode = code;
+          }
+        } catch (e) {
+          executableCode = code;
+        }
+
+        executableCode = this.compileTypeScript(executableCode);
       }
 
       // Handle variable declarations to avoid redeclaration errors
@@ -90,7 +104,7 @@ export class ExecutionEngine extends EventEmitter {
       // If the execution produced undefined but the source ends with an expression
       // try to evaluate the last non-empty line as an expression to return its value
       let finalResult = result;
-      if (finalResult === undefined) {
+  if (finalResult === undefined) {
         try {
           const lines = code.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
           const last = lines.length ? lines[lines.length - 1] : '';
@@ -107,6 +121,13 @@ export class ExecutionEngine extends EventEmitter {
           // ignore
         }
       }
+
+      // If still undefined for TS, check sandbox.__quokka_result (set by appended assignment)
+      try {
+        if (finalResult === undefined && context.language === 'typescript') {
+          finalResult = (context.sandbox as any).__quokka_result;
+        }
+      } catch (e) {}
 
       const executionTime = Date.now() - startTime;
 
@@ -173,7 +194,7 @@ export class ExecutionEngine extends EventEmitter {
     const consoleBuffer: string[] = [];
     const bufferHolder = { buffer: consoleBuffer };
 
-    const sandbox = vm.createContext({
+  const sandbox = vm.createContext({
       // Safe globals
       console: {
         log: (...args: any[]) => bufferHolder.buffer.push(this.formatConsoleOutput('log', args)),
@@ -195,6 +216,9 @@ export class ExecutionEngine extends EventEmitter {
       __dirname: undefined,
       __filename: undefined
     });
+
+  // Ensure a place to store last-expression results
+  (sandbox as any).__quokka_result = undefined;
 
     return {
       id,
