@@ -1,5 +1,7 @@
 import * as vscode from 'vscode';
 import { ExecutionResult } from './ExecutionEngine';
+import { formatValue, formatError } from '../utils';
+import { DecorationManager } from '../decorations';
 
 export interface AnnotationOptions {
   showTypes: boolean;
@@ -104,9 +106,13 @@ export class AnnotationRenderer {
   }
 
   private applyAnnotations(editor: vscode.TextEditor, annotations: LineAnnotation[]): void {
-    const resultDecorations: vscode.DecorationOptions[] = [];
-    const errorDecorations: vscode.DecorationOptions[] = [];
-    const consoleDecorations: vscode.DecorationOptions[] = [];
+  const resultDecorations: vscode.DecorationOptions[] = [];
+  const errorDecorations: vscode.DecorationOptions[] = [];
+  const consoleDecorations: vscode.DecorationOptions[] = [];
+  const gutterOk: vscode.DecorationOptions[] = [];
+  const gutterError: vscode.DecorationOptions[] = [];
+  const coverageBg: vscode.DecorationOptions[] = [];
+  const coverageGutter: vscode.DecorationOptions[] = [];
 
     annotations.forEach(annotation => {
       const line = editor.document.lineAt(annotation.line);
@@ -114,8 +120,8 @@ export class AnnotationRenderer {
 
       if (annotation.result.isError) {
         // Error annotation
-        const errorText = this.formatError(annotation.result.error!);
-        errorDecorations.push({
+    const errorText = formatError(annotation.result.error!);
+  errorDecorations.push({
           range,
           renderOptions: {
             after: {
@@ -126,9 +132,10 @@ export class AnnotationRenderer {
             }
           }
         });
+  gutterError.push({ range });
       } else {
         // Success annotation
-        const valueText = this.formatValue(annotation.result.value);
+    const valueText = formatValue(annotation.result.value, this.options.maxValueLength);
         const typeText = this.options.showTypes ? ` : ${annotation.result.type}` : '';
         const timeText = this.options.showExecutionTime ? ` (${annotation.result.executionTime}ms)` : '';
         
@@ -143,6 +150,13 @@ export class AnnotationRenderer {
             }
           }
         });
+        gutterOk.push({ range });
+
+        // coverage decorations when result.covered is true
+        if (annotation.result.covered) {
+          coverageBg.push({ range });
+          coverageGutter.push({ range });
+        }
 
         // Console output annotation
         if (this.options.showConsoleOutput && annotation.result.consoleOutput.length > 0) {
@@ -172,40 +186,17 @@ export class AnnotationRenderer {
     if (consoleDecorations.length > 0) {
       editor.setDecorations(this.decorationTypes.get('console')!, consoleDecorations);
     }
+
+  // Apply gutter and coverage decorations via DecorationManager
+  const decMgr = DecorationManager.getInstance();
+  if (gutterOk.length) decMgr.setDecorations(editor, 'gutterOk', gutterOk);
+  if (gutterError.length) decMgr.setDecorations(editor, 'gutterError', gutterError);
+  if (coverageBg.length) decMgr.setDecorations(editor, 'coverageBackground', coverageBg);
+  if (coverageGutter.length) decMgr.setDecorations(editor, 'coverageGutter', coverageGutter);
   }
 
-  private formatValue(value: any): string {
-    if (value === null) return 'null';
-    if (value === undefined) return 'undefined';
-    
-    if (typeof value === 'string') {
-      const truncated = value.length > this.options.maxValueLength 
-        ? `${value.substring(0, this.options.maxValueLength)}...`
-        : value;
-      return `"${truncated}"`;
-    }
-    
-    if (typeof value === 'object') {
-      try {
-        let json = JSON.stringify(value);
-        if (json.length > this.options.maxValueLength) {
-          json = `${json.substring(0, this.options.maxValueLength)}...`;
-        }
-        return json;
-      } catch {
-        return '[Object]';
-      }
-    }
-    
-    const str = String(value);
-    return str.length > this.options.maxValueLength 
-      ? `${str.substring(0, this.options.maxValueLength)}...`
-      : str;
-  }
 
-  private formatError(error: Error): string {
-    return error.message || 'Unknown error';
-  }
+  // Formatting delegated to shared utils.formatValue/formatError
 
   private createDecorationTypes(): void {
     // Dispose existing types

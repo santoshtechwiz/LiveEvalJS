@@ -1,58 +1,40 @@
 import * as vscode from 'vscode';
 
-// Live marker regex - captures the code before the marker and matches both // ? and /*?*/ patterns
-// Group 1 will contain the code text before the live marker.
-// Match // ? or // ?<flags> and /*?*/ — allow optional non-space trailing flags after the '?'
+// Centralized regex patterns
 export const LIVE_MARKER_RE = /(.*?)(?:\/\/\s*\?\S*|\/\*\s*\?\s*\*\/)/;
 
-// Circular reference replacer for JSON.stringify
-export function replacerCircular() {
-  const seen = new WeakSet();
-  return (key: string, value: any) => {
-    if (typeof value === 'object' && value !== null) {
-      if (seen.has(value)) {
-        return '[Circular]';
-      }
-      seen.add(value);
-    }
-    return value;
-  };
-}
-
-// Format values for display
+// Shared formatting functions
 export function formatValue(value: any, maxLength: number = 100): string {
   if (value === null) return 'null';
   if (value === undefined) return 'undefined';
+
   if (typeof value === 'string') {
-    const stringValue = `"${value}"`;
-    return stringValue.length > maxLength
-      ? `${stringValue.substring(0, maxLength)}..."`
-      : stringValue;
+    const truncated = value.length > maxLength 
+      ? `${value.substring(0, maxLength)}...`
+      : value;
+    return `"${truncated}"`;
   }
-  if (typeof value === 'function') return '[Function]';
+
   if (typeof value === 'object') {
     try {
-      const jsonValue = JSON.stringify(value, replacerCircular(), 2);
-      return jsonValue.length > maxLength
-        ? `${jsonValue.substring(0, maxLength)}...`
-        : jsonValue;
+      let json = JSON.stringify(value);
+      if (json.length > maxLength) {
+        json = `${json.substring(0, maxLength)}...`;
+      }
+      return json;
     } catch {
       return '[Object]';
     }
   }
 
-  const stringValue = String(value);
-  return stringValue.length > maxLength
-    ? `${stringValue.substring(0, maxLength)}...`
-    : stringValue;
+  const str = String(value);
+  return str.length > maxLength 
+    ? `${str.substring(0, maxLength)}...`
+    : str;
 }
 
-// Format errors for display
 export function formatError(error: any): string {
-  if (error instanceof Error) {
-    return `Error: ${error.message}`;
-  }
-  return `Error: ${String(error)}`;
+  return error.message || 'Unknown error';
 }
 
 // Clear all decorations from an editor

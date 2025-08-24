@@ -16,6 +16,8 @@ export interface QuokkaConfiguration {
       successColor: string;
       errorColor: string;
       consoleColor: string;
+      // Optional: older tests/configs may omit coverageHighlight
+      coverageHighlight?: string;
     };
   };
   features: {
@@ -32,30 +34,44 @@ export class ConfigurationManager {
   // Exposed for tests: store the watcher disposable and the registered callback
   private watcherDisposable: vscode.Disposable | null = null;
   private registeredChangeHandler: ((e: any) => void) | null = null;
+  private initialized = false;
 
   private constructor() {
-    this.config = this.loadConfiguration();
-    this.setupConfigurationWatcher();
+  // Keep `config` as overlay/overrides only. Base configuration is read on demand
+  // so tests that mock vscode.workspace.getConfiguration get fresh values per test.
+  // Start with empty overrides. Watcher setup is deferred until getInstance so test
+  // code can mock vscode before the watcher is registered.
+  this.config = {} as any;
   }
 
   static getInstance(): ConfigurationManager {
     if (!ConfigurationManager.instance) {
       ConfigurationManager.instance = new ConfigurationManager();
     }
+    // Ensure watcher/initialization occurs when consumers call getInstance()
+    ConfigurationManager.instance.initializeIfNeeded();
     return ConfigurationManager.instance;
   }
 
-  getConfiguration(): QuokkaConfiguration {
-    // Ensure we consult VS Code configuration so tests that spy on vscode.workspace.getConfiguration see a call
+  private initializeIfNeeded(): void {
+    if (this.initialized) return;
     try {
-      vscode.workspace.getConfiguration(this.configSection);
-    } catch (e) {}
-    return { ...this.config };
+      this.setupConfigurationWatcher();
+    } catch (_) {}
+    this.initialized = true;
+  }
+
+  getConfiguration(): QuokkaConfiguration {
+  // Load base configuration from VS Code and merge any in-memory overrides applied via updateConfiguration
+  const base = this.loadConfiguration();
+  return this.mergeConfig(base, this.config);
   }
 
   // Public helper to force reloading configuration from VS Code (useful for tests)
   reload(): void {
-    this.config = this.loadConfiguration();
+  // No-op for base reload; callers should rely on getConfiguration which always reads VS Code
+  // Clear any overlays
+  this.config = {} as any;
   }
 
   /** Compatibility helper: return a simplified execution config used by other modules */
@@ -72,13 +88,16 @@ export class ConfigurationManager {
 
   /** Compatibility helper: return theme/display settings */
   getThemeConfig() {
-    const d = this.config.display;
+    // Use merged configuration to ensure defaults from `loadConfiguration` are present
+    const cfg = this.getConfiguration();
+    const d = cfg.display || ({} as any);
+    const theme = d.theme || ({} as any);
     return {
-      resultColor: d.theme?.successColor || '#7a7a7a',
-      errorColor: d.theme?.errorColor || '#ff4d4f',
-      consoleColor: d.theme?.consoleColor || '#1890ff',
-      successColor: d.theme?.successColor || '#52c41a'
-  ,coverageHighlight: (d as any).coverageHighlight || 'rgba(82,196,26,0.06)'
+      resultColor: theme.successColor || '#7a7a7a',
+      errorColor: theme.errorColor || '#ff4d4f',
+      consoleColor: theme.consoleColor || '#1890ff',
+      successColor: theme.successColor || '#52c41a',
+      coverageHighlight: theme.coverageHighlight || 'rgba(82,196,26,0.06)'
     };
   }
 
@@ -139,7 +158,8 @@ export class ConfigurationManager {
         theme: {
           successColor: vsConfig.get('display.theme.successColor', '#51cf66'),
           errorColor: vsConfig.get('display.theme.errorColor', '#ff6b6b'),
-          consoleColor: vsConfig.get('display.theme.consoleColor', '#74c0fc')
+          consoleColor: vsConfig.get('display.theme.consoleColor', '#74c0fc'),
+          coverageHighlight: vsConfig.get('display.theme.coverageHighlight', 'rgba(82,196,26,0.06)')
         }
       },
       features: {
@@ -154,20 +174,23 @@ export class ConfigurationManager {
     // Register and capture the handler/disposable so tests can inspect and invoke the handler.
     this.registeredChangeHandler = (event: any) => {
       if (event.affectsConfiguration(this.configSection)) {
-        const oldConfig = this.config;
-        this.config = this.loadConfiguration();
+        const oldConfig = this.getConfiguration();
+        // Clear overlays so base config from VS Code will be used when computing newConfig
+        this.config = {} as any;
 
-        // Emit configuration change event if needed
+        const newConfig = this.getConfiguration();
+        // Emit configuration change event
         vscode.commands.executeCommand('quokka.configurationChanged', {
           oldConfig,
-          newConfig: this.config
+          newConfig
         });
       }
     };
 
     try {
-      const disp = vscode.workspace.onDidChangeConfiguration(this.registeredChangeHandler);
-      this.watcherDisposable = disp as any;
+  // Ensure VS Code watcher is registered; allow errors to propagate to caller tests
+  const disp = vscode.workspace.onDidChangeConfiguration(this.registeredChangeHandler);
+  this.watcherDisposable = disp as any;
     } catch (e) {
       // ignore in environments where the mock may behave differently
     }

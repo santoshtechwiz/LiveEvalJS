@@ -3,6 +3,7 @@ import { ExecutionEngine, ExecutionResult } from './ExecutionEngine';
 import { AnnotationRenderer } from './AnnotationRenderer';
 import { ConfigurationManager } from './ConfigurationManager';
 import { Logger } from './Logger';
+import { LIVE_MARKER_RE, formatValue, formatError } from '../utils';
 
 
 export class CodeRunner {
@@ -11,7 +12,7 @@ export class CodeRunner {
   private configManager: ConfigurationManager;
   private logger: Logger;
   private evaluationTimers = new Map<string, NodeJS.Timeout>();
-  private readonly liveMarkerRegex = /\/\/\s*\?\s*$/;
+  private readonly liveMarkerRegex = LIVE_MARKER_RE;
 
   constructor() {
     this.configManager = ConfigurationManager.getInstance();
@@ -114,7 +115,14 @@ export class CodeRunner {
       clearTimeout(existingTimer);
     }
 
-    // Schedule new evaluation
+    // Schedule new evaluation only if the document contains a live marker
+    const containsMarker = editor.document.getText().split(/\r?\n/).some(l => this.liveMarkerRegex.test(l));
+    if (!containsMarker) {
+      // nothing to evaluate, clear any existing annotations
+      this.annotationRenderer.clearAnnotations(editor);
+      return;
+    }
+
     const timer = setTimeout(() => {
       this.evaluationTimers.delete(documentId);
       this.evaluateEditor(editor);
@@ -235,13 +243,11 @@ console.log('This appears in console output'); // ?
     for (let i = 0; i < document.lineCount; i++) {
       const line = document.lineAt(i);
       const text = line.text;
-      
-      if (this.liveMarkerRegex.test(text)) {
-        // Extract code before the marker
-        const code = text.replace(this.liveMarkerRegex, '').trim();
-        if (code) {
-          lines.push({ lineNumber: i, code });
-        }
+      const m = this.liveMarkerRegex.exec(text);
+      if (m) {
+        // When using the LIVE_MARKER_RE from utils, capture group 1 contains the code before the marker
+        const code = (m[1] || '').trim() || text.replace(this.liveMarkerRegex, '').trim();
+        if (code) lines.push({ lineNumber: i, code });
       }
     }
     

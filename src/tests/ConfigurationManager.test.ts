@@ -31,6 +31,7 @@ describe('ConfigurationManager', () => {
           'display.theme.successColor': '#51cf66',
           'display.theme.errorColor': '#ff6b6b',
           'display.theme.consoleColor': '#74c0fc',
+          'display.theme.coverageHighlight': 'rgba(82,196,26,0.06)',
           'features.enableScratchpad': true,
           'features.enableInlineAnnotations': true,
           'features.enableResultsPanel': true
@@ -76,6 +77,7 @@ describe('ConfigurationManager', () => {
       expect(config.display.theme.successColor).toBe('#51cf66');
       expect(config.display.theme.errorColor).toBe('#ff6b6b');
       expect(config.display.theme.consoleColor).toBe('#74c0fc');
+      expect(config.display.theme.coverageHighlight).toBe('rgba(82,196,26,0.06)');
       
       expect(config.features.enableScratchpad).toBe(true);
       expect(config.features.enableInlineAnnotations).toBe(true);
@@ -126,7 +128,8 @@ describe('ConfigurationManager', () => {
           theme: {
             successColor: '#00ff00',
             errorColor: '#ff0000',
-            consoleColor: '#0000ff'
+            consoleColor: '#0000ff',
+            coverageHighlight: 'rgba(0,255,0,0.06)'
           }
         }
       };

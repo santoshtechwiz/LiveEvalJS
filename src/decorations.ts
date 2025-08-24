@@ -42,10 +42,10 @@ export class DecorationManager {
     const legacyConfig = this.configManager.getLegacyConfig();
 
     // Support both new and legacy configuration
-    const resultColor = themeConfig.resultColor || legacyConfig.resultColor;
-    const errorColor = themeConfig.errorColor || legacyConfig.errorColor;
-    const successColor = themeConfig.successColor;
-    const consoleColor = themeConfig.consoleColor;
+  const resultColor = themeConfig.resultColor || legacyConfig.resultColor || '#7a7a7a';
+  const errorColor = themeConfig.errorColor || legacyConfig.errorColor || '#ff4d4f';
+  const successColor = themeConfig.successColor || '#52c41a';
+  const consoleColor = themeConfig.consoleColor || '#1890ff';
 
     // Create inline result decorations
     this.outputDecorationType = vscode.window.createTextEditorDecorationType({

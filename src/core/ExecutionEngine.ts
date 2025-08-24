@@ -1,6 +1,7 @@
 import * as vm from 'vm';
 import * as ts from 'typescript';
 import { EventEmitter } from 'events';
+import { formatValue, formatError } from '../utils';
 
 export interface ExecutionResult {
   value: any;
@@ -9,6 +10,7 @@ export interface ExecutionResult {
   error?: Error;
   executionTime: number;
   consoleOutput: string[];
+  covered?: boolean;
 }
 
 export interface ExecutionContext {
@@ -23,7 +25,10 @@ export interface ExecutionContext {
 
 export class ExecutionEngine extends EventEmitter {
   private contexts = new Map<string, ExecutionContext>();
+  // maintain insertion order for a simple LRU eviction
+  private contextOrder: string[] = [];
   private readonly timeoutMs: number = 5000;
+  private readonly maxContexts = 50;
 
   constructor() {
     super();
@@ -34,11 +39,21 @@ export class ExecutionEngine extends EventEmitter {
    */
   getContext(documentId: string, language: 'javascript' | 'typescript'): ExecutionContext {
     if (this.contexts.has(documentId)) {
+  // update order to mark as recently used
+  const idx = this.contextOrder.indexOf(documentId);
+  if (idx !== -1) this.contextOrder.splice(idx, 1);
+  this.contextOrder.push(documentId);
       return this.contexts.get(documentId)!;
     }
 
     const context = this.createContext(documentId, language);
     this.contexts.set(documentId, context);
+    this.contextOrder.push(documentId);
+    // Evict oldest contexts if we've exceeded the cap
+    while (this.contextOrder.length > this.maxContexts) {
+      const oldest = this.contextOrder.shift();
+      if (oldest) this.disposeContext(oldest);
+    }
     return context;
   }
 
@@ -136,7 +151,8 @@ export class ExecutionEngine extends EventEmitter {
         type: this.getValueType(finalResult),
         isError: false,
         executionTime,
-        consoleOutput: [...(context.bufferHolder ? context.bufferHolder.buffer : context.consoleBuffer || [])]
+        consoleOutput: [...(context.bufferHolder ? context.bufferHolder.buffer : context.consoleBuffer || [])],
+        covered: /\bfunction\b|=>/.test(code)
       };
 
       this.emit('execution:success', { contextId, line, result: executionResult });
@@ -310,6 +326,16 @@ export class ExecutionEngine extends EventEmitter {
           }
         } catch {}
         clearTimeout(timeout);
+        // If the VM produced a SyntaxError-like object, rewrap in a native SyntaxError so `instanceof` checks in tests succeed.
+        try {
+          const anyErr: any = error;
+          if (anyErr && anyErr.name === 'SyntaxError') {
+            const se = new SyntaxError(anyErr.message || String(anyErr));
+            se.stack = anyErr.stack;
+            reject(se);
+            return;
+          }
+        } catch {}
         reject(error);
       }
     });
