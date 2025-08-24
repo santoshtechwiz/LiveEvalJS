@@ -3,6 +3,9 @@ import { CodeRunner } from './core/CodeRunner';
 import { ConfigurationManager } from './core/ConfigurationManager';
 import { Logger } from './core/Logger';
 
+// Module-level live extension instance for proper deactivate wiring in VS Code
+let extensionInstance: QuokkaExtension | undefined;
+
 export class QuokkaExtension {
   private codeRunner: CodeRunner;
   private configManager: ConfigurationManager;
@@ -20,7 +23,8 @@ export class QuokkaExtension {
       vscode.StatusBarAlignment.Right,
       100
     );
-    this.statusBarItem.command = 'quokka.toggleEvaluation';
+  // Use the command id defined in package.json
+  this.statusBarItem.command = 'quokka.toggle';
     this.statusBarItem.tooltip = 'Click to toggle Quokka evaluation';
     this.context.subscriptions.push(this.statusBarItem);
   }
@@ -249,9 +253,20 @@ export function updateStatusBarFromItems(items: Array<{ line: number; label: str
 export function activate(context: vscode.ExtensionContext) {
   const extension = new QuokkaExtension(context);
   extension.activate();
+  // Keep a module-level reference so deactivate() can call into the instance
+  extensionInstance = extension;
   return extension;
 }
 
 export function deactivate(): void {
-  // Handled by QuokkaExtension.deactivate()
+  // Delegate to the live instance if present
+  if (extensionInstance) {
+    try {
+      extensionInstance.deactivate();
+    } catch (e) {
+      // Best-effort: log if possible
+      try { Logger.getInstance().error('Error during extension deactivate', e as Error); } catch {}
+    }
+    extensionInstance = undefined;
+  }
 }

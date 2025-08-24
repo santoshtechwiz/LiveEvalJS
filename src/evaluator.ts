@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { LIVE_MARKER_RE, formatValue, formatError } from './utils';
 import RuntimeManager from './runtime';
-import { Sandbox, EvalResult } from './sandbox';
+import SandboxManager from './infra/sandbox/SandboxManager';
 import { DecorationManager } from './decorations';
 import ResultsProvider, { ResultItem } from './resultsProvider';
 import { EvaluationMarker } from './types';
@@ -11,14 +11,27 @@ export class Evaluator {
   private decorationManager = DecorationManager.getInstance();
   private runtimeManager = RuntimeManager;
   private config = ConfigurationManager.getInstance();
-  private sandboxes = new Map<string, Sandbox>();
+  // One SandboxManager (child worker) per document to preserve context per document
+  private sandboxes = new Map<string, SandboxManager>();
   // Per-document evaluation debounce timers
   private evalTimers = new Map<string, NodeJS.Timeout>();
 
   constructor(private context: vscode.ExtensionContext) {}
 
   public dispose() {
-    // cleanup if needed
+    // Dispose any sandbox workers and clear timers
+    try {
+      for (const sb of this.sandboxes.values()) {
+        try { sb.dispose(); } catch {}
+      }
+      this.sandboxes.clear();
+      for (const t of this.evalTimers.values()) {
+        try { clearTimeout(t); } catch {}
+      }
+      this.evalTimers.clear();
+    } catch (e) {
+      // swallow during cleanup
+    }
   }
 
   public scheduleEvaluation(editor: vscode.TextEditor) {
@@ -51,7 +64,7 @@ export class Evaluator {
       const uriKey = doc.uri.toString();
       let sandbox = this.sandboxes.get(uriKey);
       if (!sandbox) {
-        sandbox = new Sandbox(uriKey);
+        sandbox = new SandboxManager();
         this.sandboxes.set(uriKey, sandbox);
       }
 
@@ -82,43 +95,39 @@ export class Evaluator {
             }
           }
           try {
-            const res: EvalResult = sandbox.evalExpression(code, this.config.getExecutionConfig().timeout);
+            // Send code to worker for execution and get structured result
+            const timeout = this.config.getExecutionConfig().timeout ?? 1000;
+            const exec = await sandbox.execute(code, timeout);
             const lineRange = editor.document.lineAt(i).range;
-            const consoleOutput = sandbox.readConsole();
-            // Clear console buffer for next line
-            sandbox.clearConsole();
-            if (res.isError) {
-              // single error decoration with error styling
-              errorDecorations.push(this.makeAfterDecoration(editor, i, formatError(res.error || 'Error'), 'error'));
-              // Gutter error
+            const consoleOutput = exec.console || [];
+            if (!exec.ok) {
+              errorDecorations.push(this.makeAfterDecoration(editor, i, formatError(exec.error || 'Error'), 'error'));
               gutterErrorDecorations.push({ range: lineRange });
-              resultsForView.push({ line: i + 1, label: editor.document.lineAt(i).text.trim(), value: String(res.error || 'Error'), status: 'error', console: consoleOutput });
-            } else if (res.producedFromStatement) {
-              // Statement-only execution (e.g., declarations) — do not show a right-hand decoration, but still record an info gutter
-              gutterOkDecorations.push({ range: lineRange });
-              resultsForView.push({ line: i + 1, label: editor.document.lineAt(i).text.trim(), value: '', status: 'info' });
+              resultsForView.push({ line: i + 1, label: editor.document.lineAt(i).text.trim(), value: String(exec.error?.message || 'Error'), status: 'error', console: consoleOutput });
             } else {
-              // single result decoration with result styling
-              resultDecorations.push(this.makeAfterDecoration(editor, i, formatValue(res.value), 'result'));
-              // if there was console output, show it inline as well (small, secondary)
-              if (consoleOutput && consoleOutput.length) {
-                const joined = consoleOutput.join(' | ');
-                // attach console decoration after the result
-                resultDecorations.push(this.makeAfterDecoration(editor, i, joined, 'console'));
-              }
-              // Determine if this line should be considered 'covered' (function definitions or arrow functions)
-              const text = editor.document.lineAt(i).text;
-              const isFunction = /function\s+\w+\s*\(|=>/.test(text);
-              if (isFunction) {
-                coverageBackgroundDecorations.push({ range: lineRange });
-                coverageGutterDecorations.push({ range: lineRange });
-                // Mark gutter success as well
+              // Heuristic: treat declarations or semicolon-terminated lines as statement-only
+              const textLine = editor.document.lineAt(i).text;
+              const isStatementOnly = /(^\s*(?:const|let|var)\b)|;\s*$/.test(textLine);
+              if (isStatementOnly && (exec.result === undefined || exec.result === null)) {
                 gutterOkDecorations.push({ range: lineRange });
+                resultsForView.push({ line: i + 1, label: textLine.trim(), value: '', status: 'info' });
               } else {
-                // Non-function successful evaluation: mark small success gutter
-                gutterOkDecorations.push({ range: lineRange });
+                resultDecorations.push(this.makeAfterDecoration(editor, i, formatValue(exec.result), 'result'));
+                if (consoleOutput && consoleOutput.length) {
+                  const joined = (consoleOutput as string[]).join(' | ');
+                  resultDecorations.push(this.makeAfterDecoration(editor, i, joined, 'console'));
+                }
+                const text = textLine;
+                const isFunction = /function\s+\w+\s*\(|=>/.test(text);
+                if (isFunction) {
+                  coverageBackgroundDecorations.push({ range: lineRange });
+                  coverageGutterDecorations.push({ range: lineRange });
+                  gutterOkDecorations.push({ range: lineRange });
+                } else {
+                  gutterOkDecorations.push({ range: lineRange });
+                }
+                resultsForView.push({ line: i + 1, label: text.trim(), value: String(exec.result), status: isFunction ? 'ok' : 'info', console: consoleOutput });
               }
-              resultsForView.push({ line: i + 1, label: text.trim(), value: String(res.value), status: isFunction ? 'ok' : 'info', console: consoleOutput });
             }
           } catch (err) {
             errorDecorations.push(this.makeAfterDecoration(editor, i, formatError(err), 'error'));
