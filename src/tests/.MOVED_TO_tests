@@ -1,0 +1,2 @@
+Tests were moved to the top-level `tests/` directory to avoid duplicate mock warnings.
+Please remove these legacy files if you no longer need them.
