@@ -80,13 +80,15 @@ export class ConfigurationManager {
 
   /** Compatibility helper: return a simplified execution config used by other modules */
   getExecutionConfig() {
-    const c = this.config.execution;
+    // Use the merged configuration to ensure defaults are present
+    const cfg = this.getConfiguration();
+    const c = cfg.execution || ({} as any);
     return {
-      timeout: c.timeout,
-  debug: (c as any).debug || false,
-      autoEvaluate: c.autoEvaluate,
-      evaluationDelay: c.evaluationDelay,
-      supportedLanguages: c.supportedLanguages
+      timeout: c.timeout || 5000,
+      debug: (c as any).debug || false,
+      autoEvaluate: c.autoEvaluate !== undefined ? c.autoEvaluate : true,
+      evaluationDelay: c.evaluationDelay || 300,
+      supportedLanguages: c.supportedLanguages || ['javascript', 'typescript']
     };
   }
 
@@ -107,12 +109,13 @@ export class ConfigurationManager {
 
   /** Compatibility helper: return output/display settings */
   getOutputConfig() {
-    const d = this.config.display;
+    const cfg = this.getConfiguration();
+    const d = cfg.display || ({} as any);
     return {
-      showTypes: d.showTypes,
-      showExecutionTime: d.showExecutionTime,
-      showConsoleOutput: d.showConsoleOutput,
-      maxValueLength: d.maxValueLength
+      showTypes: d.showTypes !== undefined ? d.showTypes : true,
+      showExecutionTime: d.showExecutionTime !== undefined ? d.showExecutionTime : false,
+      showConsoleOutput: d.showConsoleOutput !== undefined ? d.showConsoleOutput : true,
+      maxValueLength: d.maxValueLength || 100
     };
   }
 

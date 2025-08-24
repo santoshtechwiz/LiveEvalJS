@@ -214,8 +214,8 @@ export class CodeRunner {
       clearTimeout(existingTimer);
     }
 
-    // Schedule new evaluation only if the document contains a live marker
-    const containsMarker = editor.document.getText().split(/\r?\n/).some(l => this.liveMarkerRegex.test(l));
+  // Schedule new evaluation only if the document contains a live marker or a console statement
+  const containsMarker = editor.document.getText().split(/\r?\n/).some(l => this.liveMarkerRegex.test(l) || /^\s*console\./.test(l));
     // If alwaysEvaluateAll is enabled, guard against very large files by skipping evaluation
     const cfg = this.configManager.getConfiguration();
     const features = cfg.features || ({} as any);
@@ -409,12 +409,13 @@ console.log('This appears in console output'); // ?
       for (let i = 0; i < document.lineCount; i++) {
         const lineText = document.lineAt(i).text;
         const m = this.liveMarkerRegex.exec(lineText);
-        if (!m) continue;
+        const isConsoleLine = /^\s*console\./.test(lineText);
+        if (!m && !isConsoleLine) continue;
         const lineNum = i + 1;
         // find candidate nodes that cover this line
         const candidates = nodes.filter(n => n.loc && n.loc.start && n.loc.end && n.loc.start.line <= lineNum && n.loc.end.line >= lineNum);
         if (candidates.length === 0) {
-          const code = (m[1] || '').trim() || lineText.replace(this.liveMarkerRegex, '').trim();
+          const code = (m && m[1] ? m[1].trim() : '') || (isConsoleLine ? lineText.trim() : lineText.replace(this.liveMarkerRegex, '').trim());
           if (code) lines.push({ lineNumber: i, code });
           continue;
         }
@@ -427,8 +428,8 @@ console.log('This appears in console output'); // ?
         const chosen = candidates[0];
         const startIdx = locToIndex(chosen.loc.start);
         const endIdx = locToIndex(chosen.loc.end);
-        const code = source.slice(startIdx, endIdx);
-        lines.push({ lineNumber: i, code: code.trim() });
+  const code = source.slice(startIdx, endIdx);
+  lines.push({ lineNumber: i, code: code.trim() });
       }
 
       return lines;

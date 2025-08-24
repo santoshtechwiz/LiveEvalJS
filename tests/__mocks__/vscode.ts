@@ -3,6 +3,7 @@ export const window = {
   createStatusBarItem: () => ({ show: () => {}, hide: () => {}, dispose: () => {}, text: '', color: '', tooltip: '' }),
   activeTextEditor: undefined,
   onDidChangeActiveTextEditor: () => ({ dispose: () => {} }),
+  createTextEditorDecorationType: (_options?: any) => ({ dispose: () => {} }),
   // Minimal output channel used by Logger in tests
   createOutputChannel: (name?: string) => ({
     appendLine: (_: string) => {},
@@ -48,6 +49,7 @@ export class TreeItem {
 }
 export const TreeItemCollapsibleState = { Collapsed: 1, None: 0 };
 export const TextEditorRevealType = { InCenter: 1 };
+export const DecorationRangeBehavior = { OpenOpen: 0, ClosedOpen: 1, OpenClosed: 2, ClosedClosed: 3 };
 
 const _default = {
   window,
@@ -62,7 +64,8 @@ const _default = {
   ViewColumn,
   TreeItem,
   TreeItemCollapsibleState,
-  TextEditorRevealType
+  TextEditorRevealType,
+  DecorationRangeBehavior
 };
 
 export default _default;

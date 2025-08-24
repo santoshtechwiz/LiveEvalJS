@@ -138,7 +138,7 @@ export class QuokkaExtension {
           this.isAutoEvaluationEnabled()) {
         // Only schedule if the document contains a live marker to avoid evaluation on unrelated edits
         const text = activeEditor.document.getText();
-        if (/\/\/\s*\?|\/\*\s*\?\s*\*\//.test(text)) {
+  if (/\/\/\s*\?|\/\*\s*\?\s*\*\//.test(text) || /\bconsole\./.test(text)) {
           this.codeRunner.scheduleEvaluation(activeEditor);
         }
       }
@@ -148,7 +148,7 @@ export class QuokkaExtension {
     const editorChangeDisposable = vscode.window.onDidChangeActiveTextEditor((editor) => {
       if (editor && this.shouldEvaluateEditor(editor) && this.isAutoEvaluationEnabled()) {
         const text = editor.document.getText();
-        if (/\/\/\s*\?|\/\*\s*\?\s*\*\//.test(text)) {
+        if (/\/\/\s*\?|\/\*\s*\?\s*\*\//.test(text) || /\bconsole\./.test(text)) {
           this.codeRunner.scheduleEvaluation(editor);
         }
       }

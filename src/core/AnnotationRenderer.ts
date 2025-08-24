@@ -158,9 +158,10 @@ export class AnnotationRenderer {
           coverageGutter.push({ range });
         }
 
-        // Console output annotation
+        // Console output annotation - show the most recent console entry for clarity
         if (this.options.showConsoleOutput && annotation.result.consoleOutput.length > 0) {
-          const consoleText = annotation.result.consoleOutput.join(' | ');
+          const entries = annotation.result.consoleOutput;
+          const consoleText = entries[entries.length - 1] || '';
           consoleDecorations.push({
             range,
             renderOptions: {
