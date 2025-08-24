@@ -17,6 +17,11 @@ describe('ConfigurationManager', () => {
   let mockConfig: any;
 
   beforeEach(() => {
+  // Reset the singleton instance to ensure tests are isolated
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  // @ts-ignore
+  (ConfigurationManager as any).instance = undefined;
+
     mockConfig = {
       get: jest.fn((key: string, defaultValue?: any) => {
         const configs: Record<string, any> = {

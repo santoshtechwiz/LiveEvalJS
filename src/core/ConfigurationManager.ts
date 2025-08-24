@@ -21,9 +21,13 @@ export interface QuokkaConfiguration {
     };
   };
   features: {
-    enableScratchpad: boolean;
-    enableInlineAnnotations: boolean;
-    enableResultsPanel: boolean;
+  enableScratchpad: boolean;
+  enableInlineAnnotations: boolean;
+  enableResultsPanel: boolean;
+  // New: evaluate all non-empty lines automatically
+  alwaysEvaluateAll: boolean;
+  // Max lines to evaluate when alwaysEvaluateAll is enabled
+  maxEvaluationsPerFile: number;
   };
 }
 
@@ -163,9 +167,13 @@ export class ConfigurationManager {
         }
       },
       features: {
-        enableScratchpad: vsConfig.get('features.enableScratchpad', true),
-        enableInlineAnnotations: vsConfig.get('features.enableInlineAnnotations', true),
-        enableResultsPanel: vsConfig.get('features.enableResultsPanel', true)
+  enableScratchpad: vsConfig.get('features.enableScratchpad', true),
+  enableInlineAnnotations: vsConfig.get('features.enableInlineAnnotations', true),
+  enableResultsPanel: vsConfig.get('features.enableResultsPanel', true),
+  // New: when true, evaluate all non-empty non-comment lines automatically (Quokka-style)
+  alwaysEvaluateAll: vsConfig.get('features.alwaysEvaluateAll', false),
+  // Maximum number of lines to evaluate per file when alwaysEvaluateAll is enabled
+  maxEvaluationsPerFile: vsConfig.get('features.maxEvaluationsPerFile', 200)
       }
     };
   }

@@ -1,0 +1,5 @@
+jest-haste-map: duplicate manual mock found: vscode
+  The following files share their name; please delete one of them:
+    * <rootDir>\tests\__mocks__\vscode.ts
+    * <rootDir>\src\tests\__mocks__\vscode.ts
+

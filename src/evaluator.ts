@@ -110,7 +110,14 @@ export class Evaluator {
               const isStatementOnly = /(^\s*(?:const|let|var)\b)|;\s*$/.test(textLine);
               if (isStatementOnly && (exec.result === undefined || exec.result === null)) {
                 gutterOkDecorations.push({ range: lineRange });
-                resultsForView.push({ line: i + 1, label: textLine.trim(), value: '', status: 'info' });
+                // If console output was produced by a statement (e.g., console.log), show it inline and in the results view
+                if (consoleOutput && consoleOutput.length) {
+                  const joined = (consoleOutput as string[]).join(' | ');
+                  resultDecorations.push(this.makeAfterDecoration(editor, i, joined, 'console'));
+                  resultsForView.push({ line: i + 1, label: textLine.trim(), value: String(joined), status: 'info', console: consoleOutput });
+                } else {
+                  resultsForView.push({ line: i + 1, label: textLine.trim(), value: '', status: 'info' });
+                }
               } else {
                 resultDecorations.push(this.makeAfterDecoration(editor, i, formatValue(exec.result), 'result'));
                 if (consoleOutput && consoleOutput.length) {

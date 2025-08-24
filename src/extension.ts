@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { CodeRunner } from './core/CodeRunner';
 import { ConfigurationManager } from './core/ConfigurationManager';
 import { Logger } from './core/Logger';
+import ResultsProvider, { registerResultsView } from './resultsProvider';
 
 // Module-level live extension instance for proper deactivate wiring in VS Code
 let extensionInstance: QuokkaExtension | undefined;
@@ -37,6 +38,8 @@ export class QuokkaExtension {
 
     try {
       this.registerCommands();
+  // Ensure the results view is registered so the view is available to receive results
+  try { registerResultsView(this.context); } catch {}
       this.setupEventHandlers();
       this.updateStatusBar();
       
@@ -78,12 +81,30 @@ export class QuokkaExtension {
         handler: () => this.evaluateCurrentFile()
       },
       {
-        id: 'quokka.toggleEvaluation',
+  // package.json exposes 'quokka.toggle' for the status bar. Support that id here.
+  id: 'quokka.toggle',
         handler: () => this.toggleEvaluation()
       },
       {
-        id: 'quokka.clearResults',
+  // align with package.json command id for clearing
+  id: 'quokka.clear',
         handler: () => this.clearResults()
+      },
+      {
+        id: 'quokka.clearContext',
+        handler: () => {
+          const activeEditor = vscode.window.activeTextEditor;
+          if (activeEditor) {
+            this.codeRunner.clearResults(activeEditor);
+            vscode.window.showInformationMessage('Quokka runtime context cleared for current file');
+          } else {
+            vscode.window.showInformationMessage('No active editor to clear context');
+          }
+        }
+      },
+      {
+        id: 'quokka.evaluateSelection',
+        handler: () => this.codeRunner.evaluateSelection()
       },
       {
         id: 'quokka.createScratchpad',
@@ -99,6 +120,12 @@ export class QuokkaExtension {
       const disposable = vscode.commands.registerCommand(cmd.id, cmd.handler);
       this.context.subscriptions.push(disposable);
     });
+
+    // Register a command to receive status items from CodeRunner
+    const statusDisposable = vscode.commands.registerCommand('quokka.updateStatusBarItems', (items: Array<{ line: number; label: string; value: string; status?: 'ok'|'info'|'error' }>) => {
+      try { updateStatusBarFromItems(items || []); } catch {}
+    });
+    this.context.subscriptions.push(statusDisposable);
   }
 
   private setupEventHandlers(): void {
@@ -246,6 +273,11 @@ export function updateStatusBarFromItems(items: Array<{ line: number; label: str
     sb.text = '$(info) Quokka';
     sb.color = '#faad14';
   }
+  // Show a concise tooltip with counts
+  const total = items.length;
+  const err = items.filter(i => i.status === 'error').length;
+  const ok = items.filter(i => i.status === 'ok').length;
+  sb.tooltip = `Quokka — ${total} items (${ok} OK, ${err} errors)`;
   sb.show();
 }
 

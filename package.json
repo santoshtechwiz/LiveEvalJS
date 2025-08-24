@@ -48,6 +48,11 @@
         "command": "quokka.createScratchpad",
         "title": "Quokka: Create Scratchpad File"
       }
+      ,
+      {
+        "command": "quokka.evaluateSelection",
+        "title": "Quokka: Evaluate Selection"
+      }
     ],
     "menus": {
       "editor/title": [
@@ -175,6 +180,17 @@
           "default": 100,
           "description": "Maximum length for inline values"
         }
+        ,
+        "quokkaLite.features.alwaysEvaluateAll": {
+          "type": "boolean",
+          "default": false,
+          "description": "Automatically evaluate all non-empty lines in a file (Quokka-style). Enable with caution for large files."
+        },
+        "quokkaLite.features.maxEvaluationsPerFile": {
+          "type": "number",
+          "default": 200,
+          "description": "Maximum number of lines to evaluate when alwaysEvaluateAll is enabled"
+        }
       }
     },
     "views": {
@@ -187,6 +203,13 @@
         }
       ]
     },
+    "keybindings": [
+      {
+        "command": "quokka.evaluateSelection",
+        "key": "ctrl+alt+e",
+        "when": "editorTextFocus && resourceLangId == javascript || resourceLangId == typescript"
+      }
+    ],
     "viewsContainers": {
       "panel": [
         {

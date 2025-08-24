@@ -20,6 +20,7 @@ describe('SandboxManager', () => {
     const r = await s.execute("while(true){}", 200);
     expect(r.ok).toBe(false);
     expect(r.error).toBeDefined();
-    expect(r.error && r.error.message).toMatch(/timeout|worker exited/);
+  // Depending on Node/vm behavior we may get different messages; accept common variants
+  expect(r.error && String(r.error.message)).toMatch(/timeout|worker exited|timed out/i);
   }, 10000);
 });

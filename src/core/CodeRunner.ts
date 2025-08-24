@@ -44,6 +44,40 @@ export class CodeRunner {
   }
 
   /**
+   * Evaluate selected text in the active editor. If no selection, evaluate the current line.
+   */
+  async evaluateSelection(): Promise<void> {
+    const editor = vscode.window.activeTextEditor;
+    if (!editor) {
+      this.logger.warn('No active editor found');
+      return;
+    }
+
+    const sel = editor.selection;
+    const text = sel && !sel.isEmpty ? editor.document.getText(sel) : editor.document.lineAt(sel.active.line).text;
+
+    if (!text || !text.trim()) {
+      this.logger.info('No code selected to evaluate');
+      return;
+    }
+
+    try {
+      const documentId = editor.document.uri.toString();
+      const language = editor.document.languageId as 'javascript' | 'typescript';
+      // ensure context exists
+      this.executionEngine.getContext(documentId, language);
+      const result = await this.executionEngine.execute(documentId, text.trim(), sel.active.line);
+      // Render a temporary inline annotation for the selection using AnnotationRenderer
+      const results = new Map<number, ExecutionResult>();
+      results.set(sel.active.line, result as ExecutionResult);
+      this.annotationRenderer.renderAnnotations(editor, results);
+    } catch (err) {
+      this.logger.error('Failed to evaluate selection', err as Error);
+      vscode.window.showErrorMessage(`Evaluation failed: ${(err as Error).message}`);
+    }
+  }
+
+  /**
    * Evaluates code in a specific editor
    */
   async evaluateEditor(editor: vscode.TextEditor): Promise<void> {
@@ -67,32 +101,97 @@ export class CodeRunner {
         return;
       }
 
-      // Execute each line and collect results
+      // Execute the whole document once to populate runtime context. This preserves scope
+      // for block-scoped variables and multi-line declarations (matches run-demo helper behavior).
       const results = new Map<number, ExecutionResult>();
-      
-      for (const lineInfo of linesToEvaluate) {
-        try {
-          const result = await this.executionEngine.execute(
-            documentId, 
-            lineInfo.code, 
-            lineInfo.lineNumber
-          );
-          results.set(lineInfo.lineNumber, result);
-        } catch (error) {
-          this.logger.error(`Failed to execute line ${lineInfo.lineNumber}`, error as Error);
-          results.set(lineInfo.lineNumber, {
-            value: undefined,
-            type: 'error',
-            isError: true,
-            error: error as Error,
-            executionTime: 0,
-            consoleOutput: []
-          });
+      try {
+        const fullExec = await this.executionEngine.execute(documentId, editor.document.getText());
+
+        // For each marker, query the appropriate identifier/expression against the same context
+        for (const lineInfo of linesToEvaluate) {
+          try {
+            const raw = lineInfo.code || editor.document.lineAt(lineInfo.lineNumber).text.replace(this.liveMarkerRegex, '').trim();
+            let toQuery = raw;
+
+            // Detect declarations and pick identifiers
+            const fn = raw.match(/^function\s+([A-Za-z_$][\w$]*)/);
+            if (fn) toQuery = fn[1];
+            const cls = raw.match(/^class\s+([A-Za-z_$][\w$]*)/);
+            if (cls) toQuery = cls[1];
+            const simple = raw.match(/^(?:const|let|var)\s+([A-Za-z_$][\w$]*)/);
+            if (simple) toQuery = simple[1];
+            const objDes = raw.match(/^(?:const|let|var)\s*{([^}]+)}/);
+            if (objDes) {
+              const parts = objDes[1].split(',').map(p => p.split(':')[0].trim().split('=')[0].trim()).filter(Boolean);
+              toQuery = `({ ${parts.join(', ')} })`;
+            }
+            const arrDes = raw.match(/^(?:const|let|var)\s*\[([^\]]+)\]/);
+            if (arrDes) {
+              const parts = arrDes[1].split(',').map(p => p.trim().split('=')[0].trim()).filter(Boolean);
+              toQuery = `({ ${parts.join(', ')} })`;
+            }
+
+            const isConsole = /^\s*console\./.test(raw);
+
+            if (isConsole) {
+              // show console outputs captured during full execution
+              results.set(lineInfo.lineNumber, {
+                value: undefined,
+                type: 'console',
+                isError: false,
+                executionTime: 0,
+                consoleOutput: fullExec.consoleOutput || []
+              } as ExecutionResult);
+            } else {
+              const q = await this.executionEngine.execute(documentId, toQuery, lineInfo.lineNumber);
+              results.set(lineInfo.lineNumber, q as ExecutionResult);
+            }
+          } catch (error) {
+            this.logger.error(`Failed to execute line ${lineInfo.lineNumber}`, error as Error);
+            results.set(lineInfo.lineNumber, {
+              value: undefined,
+              type: 'error',
+              isError: true,
+              error: error as Error,
+              executionTime: 0,
+              consoleOutput: []
+            });
+          }
+        }
+      } catch (fullErr) {
+        // If the full-document execution failed, fall back to per-line execution as a best-effort
+        this.logger.warn('Full document execution failed, falling back to per-line evaluation', fullErr as Error);
+        for (const lineInfo of linesToEvaluate) {
+          try {
+            const result = await this.executionEngine.execute(documentId, lineInfo.code, lineInfo.lineNumber);
+            results.set(lineInfo.lineNumber, result);
+          } catch (error) {
+            this.logger.error(`Failed to execute line ${lineInfo.lineNumber}`, error as Error);
+            results.set(lineInfo.lineNumber, {
+              value: undefined,
+              type: 'error',
+              isError: true,
+              error: error as Error,
+              executionTime: 0,
+              consoleOutput: []
+            });
+          }
         }
       }
 
       // Render annotations
       this.annotationRenderer.renderAnnotations(editor, results);
+        // Prepare a small items summary for status bar updates and results view
+        try {
+          const itemsForStatus: Array<{ line: number; label: string; value: string; status?: 'ok'|'info'|'error' }> = [];
+          for (const [ln, res] of results.entries()) {
+            itemsForStatus.push({ line: ln + 1, label: editor.document.lineAt(ln).text.trim(), value: res && res.value !== undefined ? String(res.value) : '', status: res && res.isError ? 'error' : (res && res.covered ? 'ok' : 'info') });
+          }
+          // Send to extension to update status bar (extension registers this command)
+          try { vscode.commands.executeCommand('quokka.updateStatusBarItems', itemsForStatus); } catch {}
+        } catch (e) {
+          // ignore status bar update errors
+        }
       
       this.logger.info(`Evaluated ${linesToEvaluate.length} lines in ${editor.document.fileName}`);
       
@@ -117,6 +216,19 @@ export class CodeRunner {
 
     // Schedule new evaluation only if the document contains a live marker
     const containsMarker = editor.document.getText().split(/\r?\n/).some(l => this.liveMarkerRegex.test(l));
+    // If alwaysEvaluateAll is enabled, guard against very large files by skipping evaluation
+    const cfg = this.configManager.getConfiguration();
+    const features = cfg.features || ({} as any);
+    const alwaysAll = !!features.alwaysEvaluateAll;
+    const maxEval = Number(features.maxEvaluationsPerFile || 200);
+    if (alwaysAll) {
+      const lineCount = editor.document.lineCount || 0;
+      // Skip if file line count vastly exceeds the configured max to avoid performance issues
+      if (lineCount > Math.max(1000, maxEval * 10)) {
+        this.logger.info(`Skipping always-evaluate for large file (${lineCount} lines)`);
+        return;
+      }
+    }
     if (!containsMarker) {
       // nothing to evaluate, clear any existing annotations
       this.annotationRenderer.clearAnnotations(editor);
@@ -239,19 +351,101 @@ console.log('This appears in console output'); // ?
 
   private findLiveMarkerLines(document: vscode.TextDocument): Array<{lineNumber: number, code: string}> {
     const lines: Array<{lineNumber: number, code: string}> = [];
-    
-    for (let i = 0; i < document.lineCount; i++) {
-      const line = document.lineAt(i);
-      const text = line.text;
-      const m = this.liveMarkerRegex.exec(text);
-      if (m) {
-        // When using the LIVE_MARKER_RE from utils, capture group 1 contains the code before the marker
-        const code = (m[1] || '').trim() || text.replace(this.liveMarkerRegex, '').trim();
-        if (code) lines.push({ lineNumber: i, code });
+    const cfg = this.configManager.getConfiguration();
+    const features = cfg.features || ({} as any);
+    const alwaysAll = !!features.alwaysEvaluateAll;
+    const maxEval = Number(features.maxEvaluationsPerFile || 200);
+
+    // If alwaysEvaluateAll is enabled, return all non-empty non-comment lines up to a max
+    if (alwaysAll) {
+      for (let i = 0; i < document.lineCount; i++) {
+        if (lines.length >= maxEval) break;
+        const line = document.lineAt(i);
+        const text = line.text.trim();
+        // skip blank lines and single-line comments
+        if (!text) continue;
+        if (/^\/\//.test(text) || /^\/\*/.test(text)) continue;
+        // treat full-line import/export as non-evaluable
+        if (/^\s*(import|export)\b/.test(text)) continue;
+        lines.push({ lineNumber: i, code: text.replace(this.liveMarkerRegex, '').trim() });
       }
+      return lines;
     }
-    
-    return lines;
+
+    // Try to use Acorn to find AST nodes that correspond to marked lines. This is much more robust
+    // than simple lookbacks because it selects the full declaration/expression node.
+    let source = document.getText();
+    try {
+      // load acorn dynamically so tests without the lib don't break
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const acorn = require('acorn');
+      const ast = acorn.parse(source, { ecmaVersion: 'latest', locations: true, sourceType: 'module' });
+
+      // Build line->offset map
+      const lineOffsets: number[] = [0];
+      for (let i = 0; i < source.length; i++) {
+        if (source[i] === '\n') lineOffsets.push(i + 1);
+      }
+
+      function locToIndex(loc: {line: number, column: number}) {
+        const ln = Math.max(1, loc.line);
+        const base = lineOffsets[ln - 1] || 0;
+        return base + loc.column;
+      }
+
+      // Walk AST and collect nodes
+      const nodes: any[] = [];
+      (function walk(node: any) {
+        if (!node || typeof node.type !== 'string') return;
+        nodes.push(node);
+        for (const key of Object.keys(node)) {
+          const child = node[key];
+          if (Array.isArray(child)) child.forEach(c => walk(c));
+          else if (child && typeof child.type === 'string') walk(child);
+        }
+      })(ast);
+
+      // For each line with a marker, find the smallest node that covers that line and extract its source
+      for (let i = 0; i < document.lineCount; i++) {
+        const lineText = document.lineAt(i).text;
+        const m = this.liveMarkerRegex.exec(lineText);
+        if (!m) continue;
+        const lineNum = i + 1;
+        // find candidate nodes that cover this line
+        const candidates = nodes.filter(n => n.loc && n.loc.start && n.loc.end && n.loc.start.line <= lineNum && n.loc.end.line >= lineNum);
+        if (candidates.length === 0) {
+          const code = (m[1] || '').trim() || lineText.replace(this.liveMarkerRegex, '').trim();
+          if (code) lines.push({ lineNumber: i, code });
+          continue;
+        }
+        // choose the smallest candidate (narrowest range)
+        candidates.sort((a, b) => {
+          const aRange = (a.loc.end.line - a.loc.start.line) * 1000 + (a.loc.end.column - a.loc.start.column);
+          const bRange = (b.loc.end.line - b.loc.start.line) * 1000 + (b.loc.end.column - b.loc.start.column);
+          return aRange - bRange;
+        });
+        const chosen = candidates[0];
+        const startIdx = locToIndex(chosen.loc.start);
+        const endIdx = locToIndex(chosen.loc.end);
+        const code = source.slice(startIdx, endIdx);
+        lines.push({ lineNumber: i, code: code.trim() });
+      }
+
+      return lines;
+    } catch (err) {
+      // If Acorn isn't available or parsing failed, fall back to the regex/heuristic method
+      // (previous implementation)
+      for (let i = 0; i < document.lineCount; i++) {
+        const line = document.lineAt(i);
+        const text = line.text;
+        const m = this.liveMarkerRegex.exec(text);
+        if (m) {
+          const code = (m[1] || '').trim() || text.replace(this.liveMarkerRegex, '').trim();
+          if (code) lines.push({ lineNumber: i, code });
+        }
+      }
+      return lines;
+    }
   }
 
   private isLanguageSupported(languageId: string): boolean {
