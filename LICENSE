@@ -1,0 +1,43 @@
+Copyright (c) 2026 LiveEvalJS Labs. All rights reserved.
+
+PROPRIETARY SOFTWARE — CONFIDENTIAL
+
+This software and its source code are the exclusive property of LiveEvalJS Labs
+and are protected by copyright law and international treaties.
+
+RESTRICTIONS
+
+You may NOT, without the prior explicit written permission of LiveEvalJS Labs:
+
+  1. Copy, reproduce, or duplicate this software or any portion of it.
+  2. Modify, adapt, translate, or create derivative works based on this software.
+  3. Distribute, publish, sublicense, sell, rent, lease, or otherwise transfer
+     this software or any rights in it to any third party.
+  4. Reverse-engineer, decompile, disassemble, or attempt to derive the source
+     code of any compiled portion of this software.
+  5. Remove, alter, or obscure any proprietary notices, labels, or marks on
+     this software.
+
+PERMITTED USE
+
+The VS Code extension binary distributed via the Visual Studio Code Marketplace
+may be installed and used solely for your own personal or internal business
+purposes on machines you own or control. This permission does not extend to
+the source code, which remains strictly confidential.
+
+NO WARRANTY
+
+THIS SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO WARRANTIES OF MERCHANTABILITY, FITNESS
+FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT. IN NO EVENT SHALL LIVEEVALJS
+LABS BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY, WHETHER IN AN ACTION
+OF CONTRACT, TORT, OR OTHERWISE, ARISING FROM, OUT OF, OR IN CONNECTION WITH
+THE SOFTWARE OR THE USE OR OTHERWISE DEALINGS IN THE SOFTWARE.
+
+GOVERNING LAW
+
+Any dispute arising under or in connection with this license shall be governed
+by and construed in accordance with applicable law, without regard to conflict-
+of-law principles.
+
+For licensing inquiries contact: santosh.ksingh03@gmail.com
