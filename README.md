@@ -7,9 +7,6 @@
 
 **Run JavaScript and TypeScript instantly in VS Code — see the result of every line inline as you type.**
 
-> Even minor versions (`3.2.x`, `3.4.x`) are stable. Odd minor versions (`3.3.x`) are pre-releases —
-> install them with *Switch to Pre-Release Version* in VS Code.
-
 Live Eval evaluates your code as you write it and shows the result of any expression right next to it — no terminal, no run button, no REPL, no `console.log`, no context switching. It's a free playground and scratchpad for debugging and inspecting JS/TS, with built-in **recursion** and **Event Loop & Promise** visualizers you won't find elsewhere.
 
 ![Adding a // ? marker to a line of JavaScript in VS Code and the value appearing inline, then updating when the code changes](https://raw.githubusercontent.com/santoshtechwiz/LiveEvalJS/main/media/hero-marker.gif?raw=1)
@@ -222,12 +219,15 @@ you see is your error, not ours.
 
 **What's intentionally blocked or limited:**
 - `eval()` and `new Function()` — disabled for safety
-- `globalThis`, `global`, `process` — no access to the host runtime
+- `process` — a safe read-only stub, not the real host process: `process.platform`, `.version`, `.arch` and `.cwd()` work, but `.env`, `.argv`, `.pid` are empty/absent and `.exit()`/`.kill()` throw
+- Node's CommonJS `global` — undefined, exactly like real ESM code; `globalThis` exists (it's the sandbox's own isolated realm, not the host's)
 - Browser APIs (`document`, `window`, `localStorage`, etc.) — this is a Node.js sandbox, so these are simply **undefined** (exactly as in real Node). `typeof window === 'undefined'` is `true`, so feature-detection code works; actually using `window.foo` throws `ReferenceError: window is not defined`.
 - `http://` URLs in `fetch` — HTTPS only
 - `import.meta` and top-level module-scope `await` in imported files — not supported
 
-> **Note:** React / JSX / TSX (`.jsx`, `.tsx`) is **not supported** — Live Eval evaluates plain JavaScript and TypeScript only.
+> **Note:** React / JSX / TSX (`.jsx`, `.tsx`) **is supported** — JSX is transpiled to
+> `React.createElement(...)` calls before evaluation, the same way type annotations are
+> stripped for `.ts`. `react` needs to be resolvable from your file.
 
 **Execution limits** (all configurable):
 
@@ -346,7 +346,7 @@ Settings are under `liveeval.*` in VS Code Settings (`Ctrl+,`). Changes apply li
 
 ## Troubleshooting
 
-**Results not appearing** — check the status bar shows `$(play) LiveEval`. If it says `LiveEval Disabled`, click it or press `Ctrl+Shift+L`. Make sure the file is a supported language (`.js` or `.ts`) and add a `// ?` marker to a line.
+**Results not appearing** — check the status bar shows `$(play) LiveEval`. If it says `LiveEval Disabled`, click it or press `Ctrl+Shift+L`. Make sure the file is a supported language (`.js`, `.ts`, `.jsx`, or `.tsx`) and add a `// ?` marker to a line.
 
 **Decorations look stale** — run `LiveEval: Clear Inline Results`.
 
@@ -362,7 +362,7 @@ Settings are under `liveeval.*` in VS Code Settings (`Ctrl+,`). Changes apply li
 
 **An allowed package still won't load** — if the error says `EsmOnlyModuleError`, the package ships ESM only and the sandbox's synchronous `require()` cannot load it. Add it to `liveeval.execution.esmPreload` as well as `allowedModules`.
 
-**A `.tsx` or `.jsx` import doesn't resolve** — React files are unsupported by design. The parser has no JSX support, so those imports report "module not found" rather than crashing the run.
+**A `.tsx` or `.jsx` import doesn't resolve** — `.jsx`/`.tsx` are supported (evaluating JSX calls `React.createElement`, so `react` must be resolvable from the imported file); an unresolved import is a normal module-resolution failure — run **LiveEval: Diagnose Module Resolution** to see why.
 
 **A traced method says `never called` but clearly ran** — `// trace` can't wrap an individual method inside a class body. Put the marker on the `class` instead, which traces construction and keeps `instanceof`, statics and `.name` intact.
 

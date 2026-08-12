@@ -78,12 +78,21 @@ disable live module re-runs entirely.
 Every evaluation records which lines ran and how many times. Executed lines get a count
 badge in the gutter; lines that never ran are highlighted.
 
-![VS Code editor showing a grade function with per-line execution count badges in the gutter and an unreached return statement highlighted as dead code](https://raw.githubusercontent.com/santoshtechwiz/LiveEvalJS/main/media/tutorials/coverage.png)
+```javascript
+function grade(score) {          // ×3 — entered once per call
+  if (score >= 90) return "A";   // ×1 — only grade(95) took this branch
+  if (score >= 70) return "B";   // ×1 — only grade(80) took this branch
+  if (score >= 50) return "C";   // ×1 — only grade(60) took this branch
+  return "F";                    // never executed — no call fell through this far
+}
 
-Read that image left to right and the function's behavior is fully described without
-running a debugger: three calls entered, three reached the first `if`, two got past it,
-one got past the second — and `return "F"` never executed at all, because no call passed
-a failing score.
+grade(95); grade(80); grade(60);
+```
+
+The badge on a braceless `if (cond) return X;` line counts how many times *that branch's
+return actually ran* — not how many times the condition was checked — so each distinct
+branch above reads ×1 even though the function itself ran three times. `return "F"`'s
+highlight means exactly what it says: nothing this run made it that far.
 
 That highlight is the fastest dead-code detector you have. It answers two questions
 constantly worth asking:

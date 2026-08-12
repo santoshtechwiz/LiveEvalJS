@@ -87,7 +87,7 @@ extension and the file still runs identically.
 `liveeval.behavior.evaluateWithoutMarkers` and every line reports its value.
 
 **Nothing is showing up.** Check the status bar for `LiveEval Disabled` (press
-`Ctrl+Shift+L`), confirm the file is `.js` or `.ts`, and note that `.jsx`/`.tsx` are not
+`Ctrl+Shift+L`), and confirm the file is `.js`, `.ts`, `.jsx`, or `.tsx` — all four are
 supported.
 
 ## Next

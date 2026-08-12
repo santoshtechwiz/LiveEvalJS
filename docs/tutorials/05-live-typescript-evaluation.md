@@ -92,9 +92,9 @@ those two markers. See [tutorial 6](06-multi-file-projects-and-code-coverage.md)
 **Do I need a `tsconfig.json`?** No. One is used if present (for path aliases and
 compiler options), but a standalone `.ts` file evaluates fine.
 
-**Are `.tsx` and React supported?** No. Live Eval evaluates plain TypeScript and
-JavaScript; `.tsx`/`.jsx` are unsupported by design and are ignored rather than
-half-evaluated.
+**Are `.tsx` and React supported?** Yes. JSX is transpiled the same way type annotations
+are — `.tsx`/`.jsx` reach the evaluator as plain `React.createElement(...)` calls, so
+`react` needs to be resolvable from your file (the same constraint any bundler has).
 
 **Can I use top-level `await`?** Yes, in the file you're editing — no wrapper needed. It
 is *not* supported in imported modules.

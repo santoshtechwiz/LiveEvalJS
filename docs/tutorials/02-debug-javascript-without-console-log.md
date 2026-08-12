@@ -171,7 +171,7 @@ Without `// err` on the first line, the throw ends the run and the `// ?` below 
 friendlier name. Put them on the `return`s of a branchy function to see the shape of a run:
 
 ```javascript
-function classify(n) { // trace → ⟳ classify  ×4
+function classify(n) { // trace → ⟳ classify  ×4  [hit ×4]
   if (n < 0) {
     return 'negative';   // tag negative-branch → [COUNT] 1×
   }

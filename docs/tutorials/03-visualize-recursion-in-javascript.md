@@ -119,7 +119,7 @@ reports which branches a function took and how many times:
 function classify(n) {
   if (n > 0) return "pos";
   else if (n < 0) return "neg";
-  return "zero";
+  else return "zero";
 } // path
 classify(5); classify(-3);
 // → [PATH] ⬡ 2/3 paths · missed: else (line 4) (2 calls)
