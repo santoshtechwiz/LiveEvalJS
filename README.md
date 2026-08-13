@@ -1,6 +1,6 @@
 # Live Eval — Inline JavaScript & TypeScript Playground
 
-[![Version](https://img.shields.io/visual-studio-marketplace/v/liveevaljs-labs.liveevaljs?label=version&color=blue)](https://marketplace.visualstudio.com/items?itemName=liveevaljs-labs.liveevaljs)
+[![VS Code Marketplace](https://img.shields.io/badge/VS%20Code%20Marketplace-install-blue?logo=visualstudiocode&logoColor=white)](https://marketplace.visualstudio.com/items?itemName=liveevaljs-labs.liveevaljs)
 [![VS Code](https://img.shields.io/badge/VS%20Code-%5E1.90.0-blue)](https://marketplace.visualstudio.com/items?itemName=liveevaljs-labs.liveevaljs)
 [![License](https://img.shields.io/badge/license-Proprietary-red.svg)](LICENSE)
 [![Buy me a coffee](https://img.shields.io/badge/buy%20me%20a%20coffee-support-yellow?logo=buymeacoffee&logoColor=black)](https://buymeacoffee.com/shipwithsantosh)
