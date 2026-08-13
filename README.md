@@ -7,7 +7,7 @@
 
 **Run JavaScript and TypeScript instantly in VS Code — see the result of every line inline as you type.**
 
-Live Eval evaluates your code as you write it and shows the result of any expression right next to it — no terminal, no run button, no REPL, no `console.log`, no context switching. It's a free playground and scratchpad for debugging and inspecting JS/TS, with built-in **recursion** and **Event Loop & Promise** visualizers you won't find elsewhere.
+Live Eval evaluates your code as you write it and shows the result of any expression right next to it — no terminal, no run button, no REPL, no `console.log`, no context switching. It's a free playground and scratchpad for debugging and inspecting JS/TS, with **recursion** and **Event Loop & Promise** visualizers built right into the editor.
 
 ![Adding a // ? marker to a line of JavaScript in VS Code and the value appearing inline, then updating when the code changes](https://raw.githubusercontent.com/santoshtechwiz/LiveEvalJS/main/media/hero-marker.gif?raw=1)
 
@@ -225,9 +225,23 @@ you see is your error, not ours.
 - `http://` URLs in `fetch` — HTTPS only
 - `import.meta` and top-level module-scope `await` in imported files — not supported
 
-> **Note:** React / JSX / TSX (`.jsx`, `.tsx`) **is supported** — JSX is transpiled to
-> `React.createElement(...)` calls before evaluation, the same way type annotations are
-> stripped for `.ts`. `react` needs to be resolvable from your file.
+> **JSX / TSX (`.jsx`, `.tsx`): the syntax evaluates, but this is not a React preview.**
+> JSX is transpiled to `React.createElement(...)` before evaluation, the same way type
+> annotations are stripped for `.ts`, and `react` must be resolvable from your file. What you
+> get is the **element** a component returns — `el.type`, `el.props`, nested children — which
+> is genuinely useful for checking what a component builds from given props.
+>
+> What you do **not** get is rendering. There is no DOM and no renderer mounted, so:
+> - calling `MyComponent(props)` returns an element; it does not render anything;
+> - **hooks throw** when you call a component directly (`useState` reads React's internal
+>   dispatcher, which only exists while a renderer runs) — that is React's own rule, and the
+>   error is the same one you'd get anywhere else;
+> - hooks *do* work if you render instead of call — `require('react-dom/server')
+>   .renderToString(<Counter />)` returns real markup, provided `react-dom` is installed and
+>   on your `allowedModules` list;
+> - `useEffect` still never fires, because server rendering never commits.
+>
+> Treat it as "evaluate React code and inspect the elements", not "run a React app".
 
 **Execution limits** (all configurable):
 
@@ -239,6 +253,26 @@ you see is your error, not ours.
 | Trace records per function | 50 |
 | Trace events per visualizer run | 2 000 |
 | Watch history per variable | 10 values |
+
+---
+
+## Results panel
+
+**LiveEval: Show Results Panel** opens a tree of everything the last run produced — one row per
+marker, whatever its kind (`// ?`, `// trace`, `// watch`, `// assert`, `// perf`, …), plus any
+errors, ordered by line. Clicking a row jumps to the line that produced it.
+
+Rows whose value is an object, array, `Map` or `Set` **expand in place**, so you can walk a nested
+result without leaving the panel — folding, indent guides and the type-to-filter box are the
+editor's own. Right-click any row for:
+
+| Action | What it copies |
+|--------|----------------|
+| **Copy Value** | The full value — a string verbatim, anything else as pretty-printed JSON |
+| **Copy Path** | The property path to that node (`user.tags[1]`), ready to paste back into your code |
+
+`Copy Path` is offered only where a path exists: a `Map` entry and a `Set` item are not reachable
+by one, so the action is hidden rather than producing something that would not evaluate.
 
 ---
 
@@ -269,7 +303,7 @@ Open the Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`):
 | **LiveEval: Clear Console Output** | — | Empty the captured console panel |
 | **LiveEval: Clear Results History** | — | Empty the results tree view |
 | **LiveEval: Show Status** | — | Display version and feature status |
-| **LiveEval: Support the Project** | — | Open the sponsor page |
+| **LiveEval: Buy Me a Coffee** | — | Open the Buy Me a Coffee page |
 
 ---
 
@@ -362,7 +396,9 @@ Settings are under `liveeval.*` in VS Code Settings (`Ctrl+,`). Changes apply li
 
 **An allowed package still won't load** — if the error says `EsmOnlyModuleError`, the package ships ESM only and the sandbox's synchronous `require()` cannot load it. Add it to `liveeval.execution.esmPreload` as well as `allowedModules`.
 
-**A `.tsx` or `.jsx` import doesn't resolve** — `.jsx`/`.tsx` are supported (evaluating JSX calls `React.createElement`, so `react` must be resolvable from the imported file); an unresolved import is a normal module-resolution failure — run **LiveEval: Diagnose Module Resolution** to see why.
+**A `.tsx` or `.jsx` import doesn't resolve** — those extensions do resolve, and evaluating JSX calls `React.createElement`, so `react` must be resolvable from the imported file too. An unresolved import is a normal module-resolution failure — run **LiveEval: Diagnose Module Resolution** to see why.
+
+**A React component shows an element instead of markup, or a hook throws** — expected. Live Eval evaluates the code and shows you the element; it does not render. See the JSX/TSX note under [Sandbox & Security](#sandbox--security) for what does and doesn't work, including how to get real markup via `react-dom/server`.
 
 **A traced method says `never called` but clearly ran** — `// trace` can't wrap an individual method inside a class body. Put the marker on the `class` instead, which traces construction and keeps `instanceof`, statics and `.name` intact.
 

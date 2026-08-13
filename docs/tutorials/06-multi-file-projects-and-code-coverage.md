@@ -19,9 +19,12 @@ it** — plus per-line execution counts and dead-code highlighting on every run.
 > coverage gutter still fills in; those markers just report nothing. In the file you have open,
 > every marker works.
 >
-> **Five extensions resolve:** `.ts`, `.js`, `.cjs`, `.mjs`, `.json`. `.tsx` and `.jsx` do not —
-> the sandbox parses with acorn, which has no JSX support, so a React import resolves to
-> "module not found" rather than crashing the run.
+> **Seven extensions resolve:** `.ts`, `.tsx`, `.js`, `.jsx`, `.cjs`, `.mjs`, `.json`. JSX in an
+> imported file is transpiled to `React.createElement(...)` before it is parsed, so importing a
+> `.jsx`/`.tsx` component works — as long as `react` is resolvable from that file. Note what that
+> gets you: the element the component returns, not rendered output. Nothing is mounted, so a
+> component that calls a hook throws when called directly. See
+> [tutorial 5](05-live-typescript-evaluation.md#frequently-asked-questions) for the whole picture.
 
 ## Step 1 — Import your own code
 

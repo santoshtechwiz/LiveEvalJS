@@ -87,8 +87,10 @@ extension and the file still runs identically.
 `liveeval.behavior.evaluateWithoutMarkers` and every line reports its value.
 
 **Nothing is showing up.** Check the status bar for `LiveEval Disabled` (press
-`Ctrl+Shift+L`), and confirm the file is `.js`, `.ts`, `.jsx`, or `.tsx` — all four are
-supported.
+`Ctrl+Shift+L`), and confirm the file is `.js`, `.ts`, `.jsx`, or `.tsx` — evaluation runs
+for all four. (`.jsx`/`.tsx` evaluate the code and show you the element a component returns;
+they do not render it — see
+[tutorial 5](05-live-typescript-evaluation.md#frequently-asked-questions).)
 
 ## Next
 

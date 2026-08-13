@@ -92,9 +92,40 @@ those two markers. See [tutorial 6](06-multi-file-projects-and-code-coverage.md)
 **Do I need a `tsconfig.json`?** No. One is used if present (for path aliases and
 compiler options), but a standalone `.ts` file evaluates fine.
 
-**Are `.tsx` and React supported?** Yes. JSX is transpiled the same way type annotations
-are — `.tsx`/`.jsx` reach the evaluator as plain `React.createElement(...)` calls, so
-`react` needs to be resolvable from your file (the same constraint any bundler has).
+**Are `.tsx` and React supported?** Partly, and it's worth knowing where the line is.
+`.tsx`/`.jsx` files evaluate: JSX is transpiled the same way type annotations are, so it
+reaches the evaluator as plain `React.createElement(...)` calls, and `react` must be
+resolvable from your file (the same constraint any bundler has). Imports of `.tsx`/`.jsx`
+files resolve too.
+
+What you see is the **element** a component returns, which you can open up like any other
+value:
+
+```tsx
+function Card({ title }: { title: string }) {
+  return <div className="card"><h2>{title}</h2></div>;
+}
+const card = Card({ title: 'Hello' });
+card.type;                            // ?  "div"
+card.props.children.props.children;   // ?  "Hello"
+```
+
+What you do **not** get is rendering — there is no DOM and no renderer, so a component is
+never mounted. The practical consequence is hooks: calling `Counter()` directly throws
+`Cannot read properties of null (reading 'useState')`, because a hook needs the dispatcher
+that only exists while a renderer runs. That is React's rule, not ours.
+
+If you need a component with hooks to actually run, render it rather than call it. With
+`react-dom` installed and added to `liveeval.execution.allowedModules`:
+
+```tsx
+const { renderToString } = require('react-dom/server');
+renderToString(<Counter />);   // ?  "<em>7</em>"   — useState works here
+```
+
+`useEffect` still won't fire; server rendering never commits, exactly as on a real server.
+So: good for checking what a component builds from given props, not a substitute for
+running your app in a browser.
 
 **Can I use top-level `await`?** Yes, in the file you're editing — no wrapper needed. It
 is *not* supported in imported modules.
