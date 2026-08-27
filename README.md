@@ -166,7 +166,7 @@ syntax error. Every panel can be switched off independently via the `liveeval.fe
 
 ## See it end to end
 
-![Live Eval showing inline JavaScript values in VS Code — // ? results, assertions, watch history, and loop sparklines rendered next to the code](https://raw.githubusercontent.com/santoshtechwiz/LiveEvalJS/main/media/demo.gif?raw=1)
+![Live Eval showing inline JavaScript values in VS Code: array and loop expressions evaluated live, a table view, console output capture, and coverage gutter dots next to the code](https://raw.githubusercontent.com/santoshtechwiz/LiveEvalJS/main/media/demo.gif?raw=1)
 
 ---
 
