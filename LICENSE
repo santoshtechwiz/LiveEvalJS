@@ -34,6 +34,25 @@ LABS BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY, WHETHER IN AN ACTION
 OF CONTRACT, TORT, OR OTHERWISE, ARISING FROM, OUT OF, OR IN CONNECTION WITH
 THE SOFTWARE OR THE USE OR OTHERWISE DEALINGS IN THE SOFTWARE.
 
+YOUR USE OF THE EVALUATION SANDBOX
+
+Code you evaluate with this software runs on your local machine under your own
+operating-system user permissions. You are solely responsible for the code you
+choose to evaluate, including any effect it has on your system, your files, or
+external services.
+
+The sandbox is designed to isolate evaluated code, but no sandboxing mechanism
+is unconditionally secure. Do not evaluate untrusted third-party code, and add
+modules to the 'liveeval.execution.allowedModules' setting only in workspaces
+you fully trust. LiveEvalJS Labs accepts no liability for misuse, including
+unintended access to external services, leakage of sensitive data, or violation
+of applicable law or third-party terms of service.
+
+NO WARRANTY OF CONTINUITY
+
+The software may be updated, changed, deprecated, or discontinued at any time
+without notice.
+
 GOVERNING LAW
 
 Any dispute arising under or in connection with this license shall be governed

@@ -5,67 +5,99 @@
 [![License](https://img.shields.io/badge/license-Proprietary-red.svg)](LICENSE)
 [![Buy me a coffee](https://img.shields.io/badge/buy%20me%20a%20coffee-support-yellow?logo=buymeacoffee&logoColor=black)](https://buymeacoffee.com/shipwithsantosh)
 
-**Run JavaScript and TypeScript instantly in VS Code — see the result of every line inline as you type.**
+**Run JavaScript and TypeScript in VS Code and see the result of every line inline, as you type.**
 
-Live Eval evaluates your code as you write it and shows the result of any expression right next to it — no terminal, no run button, no REPL, no `console.log`, no context switching. It's a free playground and scratchpad for debugging and inspecting JS/TS, with **recursion** and **Event Loop & Promise** visualizers built right into the editor.
+Live Eval evaluates your file while you edit it and prints the value of an expression next to the
+code that produced it. Nothing to run, nothing to log. Two visualizers come with it: an
+interactive recursion tree, and a step-by-step view of the event loop and promises.
 
-![Adding a // ? marker to a line of JavaScript in VS Code and the value appearing inline, then updating when the code changes](https://raw.githubusercontent.com/santoshtechwiz/LiveEvalJS/main/media/hero-marker.gif?raw=1)
+![A // ? marker added to a line of JavaScript in VS Code, with the value appearing inline and updating as the code changes](https://raw.githubusercontent.com/santoshtechwiz/LiveEvalJS/main/media/hero-marker.gif?raw=1)
 
 ## Why Live Eval?
 
-- **See values inline** with `// ?` — and inspect objects, prototype chains and tables without leaving the editor
-- **Visualize recursion** as an interactive call tree, DAG, and timeline
-- **Visualize the Event Loop & Promises** step-by-step in a built-in panel
-- **See coverage in the gutter** — execution counts and dead-code highlighting on every run
-- Works across `.js`, `.ts`, top-level `await`, and multi-file projects (relative imports + tsconfig path aliases)
+- End a line with `//` (or `// ?`) to see its value, and inspect objects, prototype chains and tables from the hover card
+- Turn a recursive function into an interactive call tree, DAG and timeline
+- Watch the event loop run your promises and timers step by step
+- Read execution counts and dead-code highlighting in the gutter after every run
+- Work across `.js`, `.ts`, `.jsx`, `.tsx`, top-level `await`, and multi-file projects with relative imports and tsconfig path aliases
 
 ## Quick Example
 
 ```javascript
 const prices = [12.5, 8.0, 24.99, 5.5];
-prices.filter(p => p > 10);        // ? → [12.5, 24.99]  ▁█
+prices.filter(p => p > 10);        //   → [12.5, 24.99]  ▁█
 prices.reduce((a, b) => a + b, 0); // ? → 50.989999999999995
 ```
 
-Every value in this README came from running the snippet through Live Eval — including that
-floating-point tail, which is the sort of thing inline evaluation shows you before a customer does.
+Both spellings above are the same marker: an empty `//` at the end of a line, or `// ?` written
+out. Use whichever you prefer. Neither is going away.
 
-## Get Started in 30 Seconds
+## Install
 
 1. Install from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=liveevaljs-labs.liveevaljs)
 2. Open a `.js` or `.ts` file
-3. Add `// ?` to any line — results appear as you type
+3. End any line with `//`. Results appear as you type.
 
 > **Tip:** Run **LiveEval: New JavaScript Scratchpad** or **LiveEval: New TypeScript Scratchpad** from the Command Palette for a file pre-loaded with examples.
 
 ---
 
+## Lines That Run More Than Once
+
+A line inside a loop, or in a function called repeatedly, shows every value it produced, and
+carries a `·×N` badge counting the runs (`🔥×N` past 100). No marker asks for the count; you
+always get it.
+
+```javascript
+for (let i = 0; i < 4; i++) {
+  i * 2; //   → 0  2  4  6  ▁▃▆█
+}
+```
+
+When there are more values than fit, you get the first few, then the value the line ended on,
+then a count of everything hidden. Hover the line for the full list.
+
+```javascript
+function fib(n) {
+  const r = n < 2 ? n : fib(n - 1) + fib(n - 2); //   → 1  0  1  1  2  1 … 46368 +150,042
+  return r;
+}
+fib(24);
+```
+
 ## Marker Reference
 
-Markers are plain comments. They don't change how your code runs — they just tell Live Eval what to show.
+Markers are plain comments. They tell Live Eval what to show, and they don't change how your code
+runs.
+
+That holds for errors too. A marked line that throws still throws: the marker shows the error and
+lets it travel on to whatever can catch it, so your own `try`/`catch` still runs. At the top level
+the error is shown and contained, so one bad line doesn't blank every value below it.
 
 | Marker | What it does | In imported files |
 |--------|-------------|:---:|
-| `// ?` | Show the value of the expression on this line | ✅ |
-| `// ??` | Deep inspection — type, keys, prototype chain | — |
+| `//` | Show the value of the expression on this line, using nothing but an empty comment | ✅ |
+| `// ?` | The same thing, spelled out. Both work; use whichever you prefer | ✅ |
+| `// ??` | Deep inspection: type, keys, prototype chain | — |
 | `// trace` | Record every call to this function (args, return, timing) | ✅ |
 | `// watch` | Track a variable's value across every iteration and re-evaluation | — |
 | `// assert` | Inline pass/fail test | — |
 | `// path` | Which branches ran, which were missed, and how often | — |
 | `// perf` | Benchmark this expression (ops/sec, avg time) | — |
-| `// err` | Run the line in try/catch — show the caught error, or a green `✓ no throw` | — |
+| `// err` | Run the line in try/catch and show the caught error, or a green `✓ no throw` | — |
 | `// log` | Show only `console.log` output inline, not the return value | — |
-| `// count` | Show how many times the line executed in one evaluation pass | — |
-| `// table` | Render the value as a formatted table in the hover card | — |
-| `// hit` | Count how often a line was reached, and mark it on the trace timeline | — |
-| `// tag` | The same as `// hit`, under a name that reads better on a branch | — |
+| `// table` | Render the value as an aligned table in the hover card, with a Copy-as-CSV link | — |
+| `// checkpoint` | Mark this point inside a `// trace`d function as its own event in that function's timeline | — |
 
-**Only `// ?` and `// trace` work inside imported files.** Put any other marker in a file you
-reached through an `import` and it is inert — the file still evaluates, the marker just reports
-nothing. Markers in the file you have open all work normally.
+Only the value marker (`//`, `// ?`) and `// trace` do anything inside an imported file. The rest
+are inert there: the file still evaluates, the marker just reports nothing. In the file you have
+open, all of them work.
 
-`// watch` takes an optional sampling interval: `// watch 3` records every third value, which
-keeps a long loop readable. `// watch 1` is the same as `// watch`.
+`// watch` takes an optional sampling interval. `// watch 3` records every third value, which
+keeps a long loop readable, and `// watch 1` is the same as plain `// watch`.
+
+`// checkpoint` reaches a timeline only when its line runs inside a `// trace`d function.
+Elsewhere it still counts the line, and the hover says so.
 
 Full walkthrough with worked examples: [Debug JavaScript without `console.log`](docs/tutorials/02-debug-javascript-without-console-log.md).
 
@@ -85,30 +117,28 @@ fib(8);
 // → ⟳ fib  ×67  ↓8  6ms
 ```
 
-Step through every call, argument, return value, depth and timing as a **call tree**, a **DAG**
-(collapsed duplicate subtrees), a **timeline**, or a **minimap** — with a memoization estimate
-showing how many of those 67 calls were redundant. Put the marker on the function's opening line,
-its closing brace, an arrow function's assignment, or a whole `class`. **An individual method
-inside a class body is the one placement that doesn't work** — trace the class instead.
+Step through every call, argument, return value, depth and timing as a call tree, a DAG with
+duplicate subtrees collapsed, a timeline, or a minimap. The marker goes on the function's opening
+line, its closing brace, an arrow function's assignment, or a whole `class`. It cannot go on an
+individual method inside a class body; trace the class instead.
 
 → [Visualize Recursion in JavaScript](docs/tutorials/03-visualize-recursion-in-javascript.md)
 
 ### Visualize the Event Loop & Promises
 
-Open **LiveEval: Visualize Promises** with a file containing `async`/`await`, Promises or timers.
-The panel animates the **call stack**, **Web APIs**, **microtask queue** and **callback queue**,
-plus the create → pending → fulfilled/rejected state of every promise, including `Promise.all`,
-`race`, `allSettled` and `any`. Step through it, or play it back at adjustable speed. The
-**Timeline** view shows the whole run as a phase-grouped story with real millisecond offsets — so
-a synchronous log at +2 ms and an awaited result at +2005 ms sit side by side.
+Open **LiveEval: Visualize Promises** on a file containing `async`/`await`, promises or timers.
+The panel animates the call stack, Web APIs, microtask queue and callback queue, plus the
+create → pending → settled state of every promise, including `Promise.all`, `race`, `allSettled`
+and `any`. Step through it, or play it back at adjustable speed. The Timeline view lays the same
+run out grouped by phase, with real millisecond offsets.
 
 → [Understand the JavaScript Event Loop & Promises](docs/tutorials/04-javascript-event-loop-and-promise-visualizer.md)
 
 ### See coverage and branch paths
 
-Every evaluation records which lines ran and how often. Executed lines get a gutter badge; lines
-that never ran are highlighted, so dead code is visible without a coverage tool. `// path` adds
-the branch-level view:
+Every evaluation records which lines ran and how often. Executed lines get a gutter badge, and
+lines that never ran are highlighted, so dead code is visible without a coverage tool. `// path`
+adds the branch-level view:
 
 ```javascript
 function classify(n) {
@@ -120,9 +150,9 @@ classify(5); classify(-3);
 // → [PATH] ⬡ 2/3 paths · missed: else (line 4) (2 calls)
 ```
 
-Every branch the function *contains* is counted, so the one you never exercised is named rather
-than silently absent. Tune the gutter with `liveeval.coverage.style` (`full`, `quiet`, `dead-only`),
-and toggle the `✓`/`✗` branch badges with `liveeval.features.branchHighlight.enabled`.
+A branch the function contains but never took is named, not silently absent. Set the gutter style
+with `liveeval.coverage.style` (`full`, `quiet`, `dead-only`), and toggle the `✓`/`✗` branch
+badges with `liveeval.features.branchHighlight.enabled`.
 
 → [Multi-File Projects: Coverage and Imports](docs/tutorials/06-multi-file-projects-and-code-coverage.md)
 
@@ -130,12 +160,12 @@ and toggle the `✓`/`✗` branch badges with `liveeval.features.branchHighlight
 
 Import your own `.ts`, `.js`, `.cjs`, `.mjs` and `.json` files and get inline results across the
 whole import graph. Relative imports and `tsconfig.json` path aliases (`@lib/*`) resolve
-automatically — extend them with `liveeval.pathAliases`. Editing a leaf module with nothing to run?
-Live Eval finds the entry point and re-runs it, so your results stay live; pin it with
-`liveeval.execution.entryPoints`, and keep large graphs responsive with
+automatically; add your own with `liveeval.pathAliases`. Edit a leaf module with nothing to run
+and Live Eval finds the entry point and re-runs that, so your results stay live. Pin the entry
+point with `liveeval.execution.entryPoints`, and keep large graphs responsive with
 `liveeval.execution.entryReevalBudgetMs`.
 
-TypeScript needs no setup: types are stripped at evaluation time and results are mapped back
+TypeScript needs no setup. Types are stripped at evaluation time and results are mapped back
 through source maps, so annotations land on the line you wrote even when the compiler deleted the
 lines above it.
 
@@ -149,7 +179,7 @@ for (let i = 1; i <= 5; i++) {
 }
 
 const sum = add(2, 3);
-sum === 5;                   // assert → ✓ OK
+sum === 5;                   // assert → ✓ Pass
 sum === 6;                   // assert → ✗ false
 
 JSON.parse('{ not json }');  // err → ⊘ SyntaxError: Expected property name or '}' in JSON at position 2
@@ -160,7 +190,7 @@ const res = await fetch('https://jsonplaceholder.typicode.com/todos/1'); // ?
 
 Top-level `await` needs no wrapper, `console.log` lines are annotated automatically, and
 `liveeval.behavior.stickyResults` keeps the last good results on screen while you type through a
-syntax error. Every panel can be switched off independently via the `liveeval.features.*` settings.
+syntax error. Every panel can be switched off on its own with the `liveeval.features.*` settings.
 
 ---
 
@@ -172,13 +202,12 @@ syntax error. Every panel can be switched off independently via the `liveeval.fe
 
 ## Tutorials
 
-Step-by-step guides with screenshots — every output in them was produced by running the
-snippet through Live Eval's real evaluation pipeline.
+Step-by-step guides with screenshots.
 
 | # | Tutorial | You'll learn |
 |---|----------|--------------|
 | 1 | [Getting Started: See JavaScript Values Inline in VS Code](https://github.com/santoshtechwiz/LiveEvalJS/blob/main/docs/tutorials/01-getting-started-inline-javascript-evaluation.md) | Install, add your first `// ?`, read inline results |
-| 2 | [Debug JavaScript Without `console.log`](https://github.com/santoshtechwiz/LiveEvalJS/blob/main/docs/tutorials/02-debug-javascript-without-console-log.md) | All 13 markers, with worked examples |
+| 2 | [Debug JavaScript Without `console.log`](https://github.com/santoshtechwiz/LiveEvalJS/blob/main/docs/tutorials/02-debug-javascript-without-console-log.md) | Every marker, with worked examples |
 | 3 | [Visualize Recursion in JavaScript](https://github.com/santoshtechwiz/LiveEvalJS/blob/main/docs/tutorials/03-visualize-recursion-in-javascript.md) | `// trace`, where to put it, the call-tree visualizer |
 | 4 | [Understand the JavaScript Event Loop & Promises Visually](https://github.com/santoshtechwiz/LiveEvalJS/blob/main/docs/tutorials/04-javascript-event-loop-and-promise-visualizer.md) | Call stack, Web APIs, microtasks vs. macrotasks |
 | 5 | [Live TypeScript Evaluation in VS Code](https://github.com/santoshtechwiz/LiveEvalJS/blob/main/docs/tutorials/05-live-typescript-evaluation.md) | Typed snippets, generics, source-mapped results |
@@ -190,58 +219,67 @@ Browse them all in the [tutorial index](https://github.com/santoshtechwiz/LiveEv
 
 ## Sandbox & Security
 
-Live Eval runs your code in an **isolated sandbox** — a dedicated Node.js `vm` context per document with its own global scope, no access to the extension host's globals, and hard limits on time and recursion depth. Nothing you evaluate can affect VS Code itself.
+Live Eval runs your code in an isolated sandbox: a dedicated Node.js `vm` context per document,
+with its own global scope, no access to the extension host's globals, and hard limits on time and
+recursion depth. Nothing you evaluate can affect VS Code itself.
+
+Isolation is not the same as a security boundary. Don't evaluate code you don't trust, and add
+modules to `allowedModules` only in a workspace you trust.
 
 **What works out of the box:**
-- Safe Node.js built-ins: `path`, `crypto`, `util`, `url`, `querystring`, `events`, `buffer`, `stream`, `os` — with or without the `node:` prefix (`require('node:path')` works too)
-- Both CommonJS (`require`/`module.exports`) **and** ES module (`import`/`export`) syntax — ESM is automatically converted to CommonJS, including dynamic `import()`
-- Relative imports — and `@/…` tsconfig path aliases — of your own `.ts`, `.js`, `.cjs`, `.mjs` and `.json` files, instrumented for inline results across files (multi-file evaluation)
-- `fetch` — HTTPS only, credentials never forwarded, responses over 512 KB truncated with a warning. The timeout defaults to the evaluation timeout minus 500 ms (clamped 2–30 s); pin it with `liveeval.execution.fetchTimeout`
-- Top-level `await`, async/await, Promises, timers
+- Safe Node.js built-ins: `path`, `crypto`, `util`, `url`, `querystring`, `events`, `buffer`, `stream`, `os`, with or without the `node:` prefix (`require('node:path')` works too)
+- Both CommonJS (`require`/`module.exports`) and ES module (`import`/`export`) syntax. Static `import`/`export` is converted to CommonJS, while dynamic `import()` stays genuinely asynchronous and can load ESM-only packages that `require()` cannot
+- Relative imports, and `@/…` tsconfig path aliases, of your own `.ts`, `.js`, `.cjs`, `.mjs` and `.json` files, instrumented for inline results across files
+- `fetch`, HTTPS only, credentials never forwarded, responses over 512 KB truncated with a warning. The timeout defaults to the evaluation timeout minus 500 ms (clamped 2–30 s); pin it with `liveeval.execution.fetchTimeout`
+- Top-level `await`, async/await, promises, timers
 - Full ES2020+ syntax
 
-**Module access — one simple setting.** Safe read-only builtins (above) and your own local files always work. Everything else — npm packages **and** powerful builtins like `fs`, `child_process`, `net`, `http` — is blocked until you add it to **`liveeval.execution.allowedModules`**. Listing a module is explicit consent, so you grant exactly what you trust and nothing more:
+**Module access is one setting.** The safe read-only builtins above and your own local files
+always work. Everything else, npm packages as well as powerful builtins like `fs`,
+`child_process`, `net` and `http`, is blocked until you add it to
+**`liveeval.execution.allowedModules`**. Listing a module is explicit consent, so you grant
+exactly what you trust:
 
 ```jsonc
 // .vscode/settings.json
 "liveeval.execution.allowedModules": ["lodash", "dayjs", "fs"]
 ```
 
-Requiring anything not listed returns a clear error telling you which setting to add it to. An
-ESM-only package needs `liveeval.execution.esmPreload` as well — the error says so when that is
-the cause.
+Requiring anything not listed returns a clear error naming the setting to add it to.
 
-**Error output stays yours.** To show inline results Live Eval rewrites your code before running it
-— coverage counters, marker capture calls, and a preamble of helper functions. None of that reaches
-you when something throws: stack traces are filtered down to frames from code *you* wrote, with line
-numbers translated back to your own file, and messages naming an internal helper are scrubbed. What
-you see is your error, not ours.
+**ESM-only packages.** Some packages ship no CommonJS entry point, and a synchronous `require()`
+can never load one. Use `await import('the-package')` instead: dynamic import is asynchronous, so
+it loads them directly. The package still has to be in `allowedModules`, and nothing else is
+needed. `liveeval.execution.esmPreload` remains for the case where you need such a package
+*synchronously*, from a static `import` at the top of the file or a `require()`, which the sandbox
+can only serve if the extension host loaded it in advance.
+
+**Error output stays yours.** To show inline results Live Eval rewrites your code before running
+it, adding coverage counters, marker capture calls and a preamble of helper functions. None of
+that reaches you when something throws. Stack traces are filtered down to frames from code you
+wrote, line numbers are translated back to your own file, and messages naming an internal helper
+are scrubbed.
 
 **What's intentionally blocked or limited:**
-- `eval()` and `new Function()` — disabled for safety
-- `process` — a safe read-only stub, not the real host process: `process.platform`, `.version`, `.arch` and `.cwd()` work, but `.env`, `.argv`, `.pid` are empty/absent and `.exit()`/`.kill()` throw
-- Node's CommonJS `global` — undefined, exactly like real ESM code; `globalThis` exists (it's the sandbox's own isolated realm, not the host's)
-- Browser APIs (`document`, `window`, `localStorage`, etc.) — this is a Node.js sandbox, so these are simply **undefined** (exactly as in real Node). `typeof window === 'undefined'` is `true`, so feature-detection code works; actually using `window.foo` throws `ReferenceError: window is not defined`.
-- `http://` URLs in `fetch` — HTTPS only
-- `import.meta` and top-level module-scope `await` in imported files — not supported
+- `eval()` and `new Function()`, disabled for safety
+- `process` is a safe read-only stub, not the real host process. `process.platform`, `.version`, `.arch` and `.cwd()` work, but `.env`, `.argv` and `.pid` are empty or absent, and `.exit()`/`.kill()` throw
+- Node's CommonJS `global` is undefined, exactly as in real ESM code. `globalThis` exists, and it is the sandbox's own isolated realm rather than the host's
+- Browser APIs (`document`, `window`, `localStorage`) are undefined, as they are in real Node. `typeof window === 'undefined'` is `true`, so feature-detection code works, while actually using `window.foo` throws `ReferenceError: window is not defined`
+- `http://` URLs in `fetch`, HTTPS only
+- `import.meta` and top-level module-scope `await` in imported files
 
-> **JSX / TSX (`.jsx`, `.tsx`): the syntax evaluates, but this is not a React preview.**
-> JSX is transpiled to `React.createElement(...)` before evaluation, the same way type
-> annotations are stripped for `.ts`, and `react` must be resolvable from your file. What you
-> get is the **element** a component returns — `el.type`, `el.props`, nested children — which
-> is genuinely useful for checking what a component builds from given props.
+> **JSX / TSX (`.jsx`, `.tsx`) evaluates, but this is not a React preview.**
+> JSX is transpiled to `React.createElement(...)` before evaluation, the same way type annotations
+> are stripped for `.ts`, so `react` must be resolvable from your file. What you get back is the
+> element a component returns: `el.type`, `el.props`, nested children. That is genuinely useful
+> for checking what a component builds from given props.
 >
-> What you do **not** get is rendering. There is no DOM and no renderer mounted, so:
-> - calling `MyComponent(props)` returns an element; it does not render anything;
-> - **hooks throw** when you call a component directly (`useState` reads React's internal
->   dispatcher, which only exists while a renderer runs) — that is React's own rule, and the
->   error is the same one you'd get anywhere else;
-> - hooks *do* work if you render instead of call — `require('react-dom/server')
->   .renderToString(<Counter />)` returns real markup, provided `react-dom` is installed and
->   on your `allowedModules` list;
-> - `useEffect` still never fires, because server rendering never commits.
->
-> Treat it as "evaluate React code and inspect the elements", not "run a React app".
+> What you don't get is rendering. There is no DOM and no renderer, so calling `MyComponent(props)`
+> returns an element without rendering anything, and hooks throw when you call a component
+> directly. Hooks do work if you render instead of call, via
+> `require('react-dom/server').renderToString(<Counter />)` with `react-dom` installed and
+> allow-listed, but `useEffect` still never fires, because server rendering never commits.
+> [Tutorial 5](docs/tutorials/05-live-typescript-evaluation.md) covers the details.
 
 **Execution limits** (all configurable):
 
@@ -258,21 +296,21 @@ you see is your error, not ours.
 
 ## Results panel
 
-**LiveEval: Show Results Panel** opens a tree of everything the last run produced — one row per
-marker, whatever its kind (`// ?`, `// trace`, `// watch`, `// assert`, `// perf`, …), plus any
-errors, ordered by line. Clicking a row jumps to the line that produced it.
+**LiveEval: Show Results Panel** opens a tree of everything the last run produced: one row per
+marker whatever its kind, plus any errors, ordered by line. Clicking a row jumps to the line that
+produced it.
 
-Rows whose value is an object, array, `Map` or `Set` **expand in place**, so you can walk a nested
-result without leaving the panel — folding, indent guides and the type-to-filter box are the
-editor's own. Right-click any row for:
+Rows holding an object, array, `Map` or `Set` expand in place, so you can walk a nested result
+without leaving the panel. Folding, indent guides and the type-to-filter box are the editor's own.
+Right-click any row for:
 
 | Action | What it copies |
 |--------|----------------|
-| **Copy Value** | The full value — a string verbatim, anything else as pretty-printed JSON |
+| **Copy Value** | The full value: a string verbatim, anything else as pretty-printed JSON |
 | **Copy Path** | The property path to that node (`user.tags[1]`), ready to paste back into your code |
 
-`Copy Path` is offered only where a path exists: a `Map` entry and a `Set` item are not reachable
-by one, so the action is hidden rather than producing something that would not evaluate.
+`Copy Path` appears only where a path exists. A `Map` entry and a `Set` item aren't reachable by
+one, so the action is hidden rather than producing something that wouldn't evaluate.
 
 ---
 
@@ -283,23 +321,24 @@ Open the Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`):
 | Command | Shortcut | Description |
 |---------|----------|-------------|
 | **LiveEval: Run — Evaluate Current File** | `Ctrl+Shift+Enter` | Evaluate immediately |
-| **LiveEval: Toggle Live Auto-Evaluation On/Off** | `Ctrl+Shift+L` | Enable/disable live mode |
+| **LiveEval: Toggle Live Auto-Evaluation On/Off** | `Ctrl+Shift+L` | Enable or disable live mode |
 | **LiveEval: Clear Inline Results** | — | Remove all inline decorations |
 | **LiveEval: Visualize Recursion Tree** | — | Open the call tree for the last `// trace` run |
-| **LiveEval: Visualize Promises** | — | Open the Event-loop & Promise Visualizer |
+| **LiveEval: Visualize Promises** | — | Open the event-loop and promise visualizer |
 | **LiveEval: Visualize Prototype Chain** | — | Open the prototype-chain panel for an inspected object |
-| **LiveEval: Show Console Output Panel** | — | Open the captured console output panel |
+| **LiveEval: Show Console Output Panel** | — | Open the captured console output |
 | **LiveEval: Show Results Panel** | — | Open the results tree view |
-| **LiveEval: Show Output Panel** | — | Open the extension log panel |
+| **LiveEval: Show Output Panel** | — | Open the extension log |
 | **LiveEval: New JavaScript Scratchpad** | — | New JS file pre-loaded with marker examples |
 | **LiveEval: New TypeScript Scratchpad** | — | New TS file pre-loaded with typed examples |
 | **LiveEval: Add // ? Marker to Selected Lines** | — | Insert a value marker on each selected line |
-| **LiveEval: Export Results to Clipboard** | — | Copy all current inline results as text |
-| **LiveEval: Copy Line Value to Clipboard** | — | Copy the value on the line your cursor is on |
 | **LiveEval: Toggle Debug Marker (// ?)** | — | Add or remove a `// ?` on the current line |
 | **LiveEval: Add Watch Expression** | — | Add a `// watch` for a variable you name |
+| **LiveEval: Export Results to Clipboard** | — | Copy all current inline results as text |
+| **LiveEval: Copy Line Value to Clipboard** | — | Copy the value on the line your cursor is on |
 | **LiveEval: Show Trace Log** | — | Open the recorded `// trace` calls as text |
-| **LiveEval: Diagnose Module Resolution** | — | Explain how an `import` / `require` resolved, and why one failed |
+| **LiveEval: Show Gutter Icon Legend** | — | Explain the gutter icons and badges |
+| **LiveEval: Diagnose Module Resolution** | — | Explain how an `import` or `require` resolved, and why one failed |
 | **LiveEval: Clear Console Output** | — | Empty the captured console panel |
 | **LiveEval: Clear Results History** | — | Empty the results tree view |
 | **LiveEval: Show Status** | — | Display version and feature status |
@@ -309,16 +348,17 @@ Open the Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`):
 
 ## Configuration
 
-Settings are under `liveeval.*` in VS Code Settings (`Ctrl+,`). Changes apply live — no window reload needed.
+Settings live under `liveeval.*` in VS Code Settings (`Ctrl+,`). Changes apply live, with no
+window reload.
 
 ### Execution
 
 | Setting | Default | Description |
 |---------|---------|-------------|
 | `liveeval.execution.timeout` | `5000` | Max evaluation time (ms) before a slow run is stopped |
-| `liveeval.execution.fetchTimeout` | `0` | Time limit (ms) for `fetch()` calls; `0` = auto (execution timeout − 500 ms, clamped 2–30 s) |
-| `liveeval.execution.maxCallDepth` | `1000` | Recursion guard — max call-stack depth before execution stops |
-| `liveeval.execution.allowedModules` | `[]` | Modules evaluated code may load — npm packages or powerful builtins (`fs`, `child_process`, …). Safe builtins are always available. Listing a module is explicit consent. |
+| `liveeval.execution.fetchTimeout` | `0` | Time limit (ms) for `fetch()` calls. `0` = auto: execution timeout − 500 ms, clamped 2–30 s |
+| `liveeval.execution.maxCallDepth` | `1000` | Recursion guard: max call-stack depth before execution stops |
+| `liveeval.execution.allowedModules` | `[]` | Modules evaluated code may load, npm packages or powerful builtins (`fs`, `child_process`, …). Safe builtins are always available |
 | `liveeval.execution.debug` | `false` | Print internal diagnostic logs to the output panel |
 
 ### Behavior
@@ -326,40 +366,41 @@ Settings are under `liveeval.*` in VS Code Settings (`Ctrl+,`). Changes apply li
 | Setting | Default | Description |
 |---------|---------|-------------|
 | `liveeval.behavior.evaluationDelay` | `300` | Debounce after typing before re-evaluating (ms). With adaptive delay on, this is the maximum wait |
-| `liveeval.behavior.adaptiveDelay` | `true` | Scale the debounce down to what the file actually costs to evaluate. Turn off to always wait the configured delay exactly |
-| `liveeval.behavior.evaluateWithoutMarkers` | `false` | Show results for every line automatically — no markers needed (Quokka-style) |
-| `liveeval.behavior.stickyResults` | `false` | Keep the last successful results visible while mid-edit; replace only on the next successful run |
-| `liveeval.support.showOccasionalAsk` | `true` | Allow one support prompt, ever — after several separate days of use. Set to `false` to never see it |
+| `liveeval.behavior.adaptiveDelay` | `true` | Scale the debounce down to what the file actually costs to evaluate. Turn off to always wait the configured delay |
+| `liveeval.behavior.evaluateWithoutMarkers` | `false` | Show results for every line automatically, no markers needed (Quokka-style) |
+| `liveeval.behavior.stickyResults` | `false` | Keep the last successful results visible mid-edit; replace them on the next successful run |
+| `liveeval.support.showOccasionalAsk` | `true` | Allow one support prompt, ever, after several separate days of use. Set to `false` to never see it |
 
 ### Markers & history
 
 | Setting | Default | Description |
 |---------|---------|-------------|
 | `liveeval.execution.traceMaxCalls` | `50` | Max call records per `// trace` |
-| `liveeval.execution.traceMaxEvents` | `2000` | Max trace events streamed to the recursion visualizer per run, shared across every `// trace` in the file — each traced function is guaranteed a slice, so a hot one cannot use up the whole budget |
+| `liveeval.execution.traceMaxEvents` | `2000` | Max trace events streamed to the recursion visualizer per run, shared across every `// trace` in the file. Each traced function is guaranteed a slice, so a hot one cannot use up the whole budget |
 | `liveeval.execution.watchHistorySize` | `10` | Values retained per `// watch` across re-evaluations |
+| `liveeval.hover.showLearningTips` | `true` | Show a one-line explainer at the top of marker hovers. Turn off once you know the markers by heart |
 
 ### Multi-file projects
 
 | Setting | Default | Description |
 |---------|---------|-------------|
 | `liveeval.execution.entryPoints` | `[]` | Explicit entry-point files (e.g. `["src/app.ts"]`) overriding automatic entry detection |
-| `liveeval.execution.entryReevalBudgetMs` | `1200` | Time budget (ms) for re-running the whole import graph when a module is edited; `0` disables live module re-runs |
+| `liveeval.execution.entryReevalBudgetMs` | `1200` | Time budget (ms) for re-running the whole import graph when a module is edited. `0` disables live module re-runs |
 | `liveeval.pathAliases` | `{}` | Manual path-alias map (e.g. `{"@lib/*": "src/lib/*"}`) supplementing auto-detected `tsconfig.json` paths |
-| `liveeval.execution.esmPreload` | `[]` | ESM-only packages to load ahead of evaluation so the sandbox's synchronous `require()` can serve them. Also list them in `allowedModules` |
+| `liveeval.execution.esmPreload` | `[]` | ESM-only packages to load ahead of evaluation so the sandbox's synchronous `require()` and static `import` can serve them. Not needed for `await import()`. Also list them in `allowedModules` |
 
 ### Console output
 
 | Setting | Default | Description |
 |---------|---------|-------------|
 | `liveeval.console.maxDepth` | `6` | Object nesting depth for console output inspection |
-| `liveeval.console.filter` | `{"mode":"off","levels":[]}` | Log-level filter: `whitelist` shows only listed levels, `blacklist` hides them (e.g. `{"mode":"blacklist","levels":["debug"]}`) |
+| `liveeval.console.filter` | `{"mode":"off","levels":[]}` | Log-level filter. `whitelist` shows only the listed levels, `blacklist` hides them (e.g. `{"mode":"blacklist","levels":["debug"]}`) |
 
 ### Coverage & editor decorations
 
 | Setting | Default | Description |
 |---------|---------|-------------|
-| `liveeval.coverage.style` | `"full"` | Coverage presentation: `full` (badges + dead-line highlight), `quiet` (badges only), `dead-only` (only highlight never-executed lines) |
+| `liveeval.coverage.style` | `"full"` | Coverage presentation: `full` (badges and dead-line highlight), `quiet` (badges only), `dead-only` (highlight never-executed lines only) |
 | `liveeval.features.branchHighlight.enabled` | `true` | `✓`/`✗` taken / not-taken branch badges in the gutter |
 | `liveeval.features.promiseLens.enabled` | `true` | Show the ⚡ Visualize Promises CodeLens above async code |
 
@@ -373,40 +414,68 @@ Settings are under `liveeval.*` in VS Code Settings (`Ctrl+,`). Changes apply li
 | `liveeval.features.recursionTree.enabled` | `true` | Show the Execution Tree panel |
 | `liveeval.features.timeline.enabled` | `true` | Show the Execution Timeline tab |
 | `liveeval.features.callStack.enabled` | `true` | Show the Call Stack panel |
-| `liveeval.features.backtrack.enabled` | `true` | Show backtracking highlights/animation |
+| `liveeval.features.backtrack.enabled` | `true` | Show backtracking highlights and animation |
 | `liveeval.features.resultsOutput.enabled` | `true` | Show the Results / Console pane |
+
+### Deprecated
+
+Both of these predate the allow-list. They still work, so an old `settings.json` keeps behaving as
+it did, but neither is needed in a new one.
+
+| Setting | Replaced by | Notes |
+|---------|-------------|-------|
+| `liveeval.execution.allowFilesystemAccess` | `liveeval.execution.allowedModules` | List the builtins you actually need (`"fs"`, `"child_process"`). While this is `true`, the builtins it used to unblock are still granted |
+| `liveeval.execution.blockedModules` | nothing | Modules are blocked by default now, so there is nothing left to block. Names still listed here are subtracted from the allow-list |
 
 ---
 
 ## Troubleshooting
 
-**Results not appearing** — check the status bar shows `$(play) LiveEval`. If it says `LiveEval Disabled`, click it or press `Ctrl+Shift+L`. Make sure the file is a supported language (`.js`, `.ts`, `.jsx`, or `.tsx`) and add a `// ?` marker to a line.
+**Results not appearing.** Check that the status bar shows `$(play) LiveEval`. If it says
+`LiveEval Disabled`, click it or press `Ctrl+Shift+L`. The file also has to be a supported
+language (`.js`, `.ts`, `.jsx`, `.tsx`) with a `// ?` marker on a line.
 
-**Decorations look stale** — run `LiveEval: Clear Inline Results`.
+**Decorations look stale.** Run `LiveEval: Clear Inline Results`.
 
-**Slow typing** — raise `liveeval.behavior.evaluationDelay` to `500`–`1000` ms.
+**Slow typing.** Raise `liveeval.behavior.evaluationDelay` to 500–1000 ms.
 
-**Recursion visualizer is empty** — evaluate the file first, and check the function actually recurses: a flat function offers *View Calls* rather than *View Tree*, because there's no tree to draw. If the marker says the function was never called, nothing in the file is calling it.
+**Recursion visualizer is empty.** Evaluate the file first, then check that the function actually
+recurses. A flat function offers *View Calls* rather than *View Tree*, because there is no tree to
+draw. If the marker says the function was never called, nothing in the file is calling it.
 
-**`require()` not found** — the sandbox scopes `require` to your workspace root. Open the file inside a VS Code workspace folder.
+**`require()` not found.** The sandbox scopes `require` to your workspace root, so open the file
+inside a VS Code workspace folder.
 
-**Imports fail in a multi-file project** — check that the imported file is part of the workspace and that the relative file path is correct.
+**Imports fail in a multi-file project.** Check that the imported file is part of the workspace
+and that the relative path is correct.
 
-**A marker does nothing in an imported file** — only `// ?` and `// trace` report across a module boundary; the other eleven are inert there. Open that file and evaluate it directly if you need the rest.
+**A marker does nothing in an imported file.** Only `// ?` and `// trace` report across a module
+boundary. Open that file and evaluate it directly if you need the rest.
 
-**An allowed package still won't load** — if the error says `EsmOnlyModuleError`, the package ships ESM only and the sandbox's synchronous `require()` cannot load it. Add it to `liveeval.execution.esmPreload` as well as `allowedModules`.
+**An allowed package still won't load.** If the error says `EsmOnlyModuleError`, the package ships
+ESM only and the sandbox's synchronous `require()` cannot load it. Switch that import to
+`await import('the-package')`, which is asynchronous and loads it directly. If you need it
+synchronously, add it to `liveeval.execution.esmPreload` as well as `allowedModules`.
 
-**A `.tsx` or `.jsx` import doesn't resolve** — those extensions do resolve, and evaluating JSX calls `React.createElement`, so `react` must be resolvable from the imported file too. An unresolved import is a normal module-resolution failure — run **LiveEval: Diagnose Module Resolution** to see why.
+**A `.tsx` or `.jsx` import doesn't resolve.** Those extensions do resolve, and evaluating JSX
+calls `React.createElement`, so `react` must be resolvable from the imported file too. An
+unresolved import is an ordinary module-resolution failure; run **LiveEval: Diagnose Module
+Resolution** to see why.
 
-**A React component shows an element instead of markup, or a hook throws** — expected. Live Eval evaluates the code and shows you the element; it does not render. See the JSX/TSX note under [Sandbox & Security](#sandbox--security) for what does and doesn't work, including how to get real markup via `react-dom/server`.
+**A React component shows an element instead of markup, or a hook throws.** That's expected. Live
+Eval evaluates the code and shows you the element, it does not render. See the JSX/TSX note under
+[Sandbox & Security](#sandbox--security).
 
-**A traced method says `never called` but clearly ran** — `// trace` can't wrap an individual method inside a class body. Put the marker on the `class` instead, which traces construction and keeps `instanceof`, statics and `.name` intact.
+**A traced method says `never called` but clearly ran.** `// trace` can't wrap an individual
+method inside a class body. Put the marker on the `class` instead, which traces construction and
+keeps `instanceof`, statics and `.name` intact.
 
 ---
 
 ## Feedback
 
-Found a bug or have a suggestion? **[Submit feedback](https://forms.gle/psrNnGf6RUh9QFxz7)** — include the code that triggered it, your VS Code version, and OS.
+Found a bug or have a suggestion? **[Submit feedback](https://forms.gle/psrNnGf6RUh9QFxz7)**.
+Include the code that triggered it, your VS Code version, and your OS.
 
 ---
 
@@ -414,30 +483,10 @@ Found a bug or have a suggestion? **[Submit feedback](https://forms.gle/psrNnGf6
 
 Copyright (c) 2026 LiveEvalJS Labs. All rights reserved.
 
-This software is **proprietary and confidential**. The source code is not open source. You may install and use the extension binary distributed via the VS Code Marketplace for personal or internal business purposes only.
+Live Eval is proprietary software and the source code is not open source. You may install and use
+the extension binary from the VS Code Marketplace for personal or internal business purposes.
+Copying, modifying, redistributing, sublicensing or reverse-engineering it requires prior written
+permission.
 
-You may **not** copy, modify, distribute, sublicense, reverse-engineer, or create derivative works from this software without the prior explicit written permission of LiveEvalJS Labs.
-
-See the [LICENSE](LICENSE) file for the full terms.
-
----
-
-## Terms & Conditions
-
-By installing or using Live Eval you agree to the following:
-
-**1. Permitted use.** You may install and use the extension on machines you own or control, solely for your own personal or internal business purposes.
-
-**2. Restrictions.** You may not redistribute, resell, sublicense, reverse-engineer, decompile, or create derivative works based on this software without explicit written permission from LiveEvalJS Labs.
-
-**3. Code execution is your responsibility.** Code you evaluate runs on your local machine under your own operating-system user permissions. You are solely responsible for the code you choose to evaluate, including any effects it may have on your system, files, or external services.
-
-**4. No warranty.** This software is provided "as is", without warranty of any kind, express or implied — including but not limited to warranties of merchantability, fitness for a particular purpose, or non-infringement.
-
-**5. Limitation of liability.** LiveEvalJS Labs shall not be liable for any direct, indirect, incidental, special, consequential, or punitive damages arising from the use or inability to use this software, even if advised of the possibility of such damages.
-
-**6. No warranty of continuity.** The extension may be updated, changed, deprecated, or discontinued at any time without notice.
-
-**7. Security.** While the sandbox is designed to isolate evaluated code, no sandboxing mechanism is unconditionally secure. Do not evaluate untrusted third-party code. Add modules to `liveeval.execution.allowedModules` only in workspaces you fully trust.
-
-**8. No responsibility for misuse.** LiveEvalJS Labs accepts no liability for misuse, including unintended access to external services, leakage of sensitive data, or violations of applicable laws or third-party terms of service.
+Installing or using the extension means accepting the full terms in [LICENSE](LICENSE), which also
+covers your responsibility for the code you choose to evaluate.
